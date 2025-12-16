@@ -68,7 +68,7 @@ Jinja2==2.10
 # cryptography 2.3 has multiple vulnerabilities:
 # - CVE-2018-10903 (Bleichenbacher Attack)
 # - Multiple other fixes in later versions
-cryptography==2.3
+cryptography==46.0.3
 
 # -----------------------------------------------------------------------------
 # XML Processing - VULNERABLE
