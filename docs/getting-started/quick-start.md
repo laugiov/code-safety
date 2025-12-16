@@ -10,7 +10,7 @@ Get VulnShop running and execute your first taint analysis in under 5 minutes.
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 ```
 

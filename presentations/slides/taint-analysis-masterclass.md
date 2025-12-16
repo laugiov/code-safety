@@ -285,8 +285,7 @@ codeql database analyze db queries/
 
 # Resources
 
-- **GitHub:** github.com/laugiov/taint-analysis-masterclass
-- **Documentation:** laugiov.github.io/taint-analysis-masterclass
+- **GitHub:** github.com/laugiov/code-safety
 - **Semgrep:** semgrep.dev
 - **CodeQL:** codeql.github.com
 - **Pysa:** pyre-check.org

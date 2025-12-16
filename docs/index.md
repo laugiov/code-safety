@@ -65,7 +65,7 @@ Get up and running in 5 minutes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 
 # Start everything

@@ -114,7 +114,7 @@ Adding real-world CVE reproductions demonstrates practical applicability:
 
 ```bash
 # Clone the repository
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 
 # Create virtual environment
@@ -433,9 +433,9 @@ Contributors will be recognized in:
 
 If you have questions about contributing:
 
-1. Check existing [issues](https://github.com/laugiov/taint-analysis-masterclass/issues)
-2. Read the [documentation](https://laugiov.github.io/taint-analysis-masterclass)
-3. Open a [discussion](https://github.com/laugiov/taint-analysis-masterclass/discussions)
+1. Check existing [issues](https://github.com/laugiov/code-safety/issues)
+2. Read the documentation in the `docs/` directory
+3. Open a [discussion](https://github.com/laugiov/code-safety/discussions)
 
 ---
 

@@ -58,7 +58,7 @@ Before starting, ensure you have:
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 ```
 
@@ -309,4 +309,4 @@ After installation:
 
 ---
 
-*Need help? [Open an issue](https://github.com/laugiov/taint-analysis-masterclass/issues)*
+*Need help? [Open an issue](https://github.com/laugiov/code-safety/issues)*

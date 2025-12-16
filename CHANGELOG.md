@@ -141,6 +141,5 @@ This is the initial release. No upgrade path required.
 
 ## Links
 
-- [GitHub Releases](https://github.com/laugiov/taint-analysis-masterclass/releases)
-- [Documentation](https://laugiov.github.io/taint-analysis-masterclass)
-- [Issue Tracker](https://github.com/laugiov/taint-analysis-masterclass/issues)
+- [GitHub Releases](https://github.com/laugiov/code-safety/releases)
+- [Issue Tracker](https://github.com/laugiov/code-safety/issues)

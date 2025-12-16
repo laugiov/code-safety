@@ -14,34 +14,15 @@
 
 > **BETA VERSION** - This project is under active development. Some features are incomplete and configurations may require adjustments to work in your environment.
 
-<!-- Status Badges -->
-[![Project Status: WIP](https://img.shields.io/badge/Project%20Status-Beta-orange.svg)](https://github.com/laugiov/taint-analysis-masterclass)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/laugiov/taint-analysis-masterclass/graphs/commit-activity)
+[![GitHub license](https://img.shields.io/github/license/laugiov/code-safety)](https://github.com/laugiov/code-safety/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/laugiov/code-safety)](https://github.com/laugiov/code-safety/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/laugiov/code-safety)](https://github.com/laugiov/code-safety/issues)
+[![GitHub forks](https://img.shields.io/github/forks/laugiov/code-safety)](https://github.com/laugiov/code-safety/network)
 
-<!-- CI/CD Badges -->
-[![CI](https://github.com/laugiov/taint-analysis-masterclass/workflows/CI/badge.svg)](https://github.com/laugiov/taint-analysis-masterclass/actions/workflows/ci.yml)
-[![Pysa](https://github.com/laugiov/taint-analysis-masterclass/workflows/Pysa%20Analysis/badge.svg)](https://github.com/laugiov/taint-analysis-masterclass/actions/workflows/pysa-analysis.yml)
-[![CodeQL](https://github.com/laugiov/taint-analysis-masterclass/workflows/CodeQL/badge.svg)](https://github.com/laugiov/taint-analysis-masterclass/actions/workflows/codeql-analysis.yml)
-[![Semgrep](https://github.com/laugiov/taint-analysis-masterclass/workflows/Semgrep/badge.svg)](https://github.com/laugiov/taint-analysis-masterclass/actions/workflows/semgrep-analysis.yml)
-
-<!-- Documentation & Quality -->
-[![Documentation](https://github.com/laugiov/taint-analysis-masterclass/workflows/Documentation/badge.svg)](https://laugiov.github.io/taint-analysis-masterclass)
-[![MkDocs](https://img.shields.io/badge/docs-MkDocs%20Material-blue.svg)](https://laugiov.github.io/taint-analysis-masterclass)
-
-<!-- Tech Stack -->
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Django](https://img.shields.io/badge/django-4.2+-green.svg)](https://www.djangoproject.com/)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
-
-<!-- License & Community -->
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![GitHub Issues](https://img.shields.io/github/issues/laugiov/taint-analysis-masterclass)](https://github.com/laugiov/taint-analysis-masterclass/issues)
-[![GitHub Stars](https://img.shields.io/github/stars/laugiov/taint-analysis-masterclass?style=social)](https://github.com/laugiov/taint-analysis-masterclass/stargazers)
+**Tools:** Pysa (Meta) | CodeQL (GitHub) | Semgrep
 
 **Demonstration of taint analysis for application security**
 
-[Documentation](https://laugiov.github.io/taint-analysis-masterclass) •
 [VulnShop](#-vulnshop) •
 [Tools](#-analysis-tools) •
 [Benchmarks](#-benchmarks) •
@@ -108,7 +89,7 @@ See [Contributing](#-contributing) for how to help complete the project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 
 # Start everything with Docker
@@ -345,7 +326,13 @@ taint-analysis-masterclass/
 
 ## Documentation
 
-Comprehensive documentation is available at **[laugiov.github.io/taint-analysis-masterclass](https://laugiov.github.io/taint-analysis-masterclass)**
+Comprehensive documentation is available in the `docs/` directory. Build locally with MkDocs:
+
+```bash
+pip install mkdocs-material
+mkdocs serve
+# Open http://localhost:8000
+```
 
 ### Topics Covered
 
@@ -402,7 +389,7 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ```bash
 # Clone and setup
-git clone https://github.com/laugiov/taint-analysis-masterclass.git
+git clone https://github.com/laugiov/code-safety.git
 cd taint-analysis-masterclass
 
 # Install development dependencies

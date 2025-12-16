@@ -47,11 +47,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/laugiov/taint-analysis-masterclass"
-Documentation = "https://laugiov.github.io/taint-analysis-masterclass"
-Repository = "https://github.com/laugiov/taint-analysis-masterclass.git"
-Issues = "https://github.com/laugiov/taint-analysis-masterclass/issues"
-Changelog = "https://github.com/laugiov/taint-analysis-masterclass/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/laugiov/code-safety"
+Repository = "https://github.com/laugiov/code-safety.git"
+Issues = "https://github.com/laugiov/code-safety/issues"
+Changelog = "https://github.com/laugiov/code-safety/blob/main/CHANGELOG.md"
 
 # =============================================================================
 # Build System

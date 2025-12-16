@@ -57,5 +57,5 @@ Taint Analysis Masterclass consists of several components:
 ## Need Help?
 
 - Check the [FAQ](#) section
-- Open an [issue on GitHub](https://github.com/laugiov/taint-analysis-masterclass/issues)
+- Open an [issue on GitHub](https://github.com/laugiov/code-safety/issues)
 - Read the [Contributing Guide](../contributing.md)

@@ -1,10 +1,10 @@
 site_name: Taint Analysis Masterclass
 site_description: Professional demonstration of taint analysis for application security
 site_author: Laurent Giovannoni
-site_url: https://laugiov.github.io/taint-analysis-masterclass
+site_url: ""  # Update when deploying to GitHub Pages
 
-repo_name: laugiov/taint-analysis-masterclass
-repo_url: https://github.com/laugiov/taint-analysis-masterclass
+repo_name: laugiov/code-safety
+repo_url: https://github.com/laugiov/code-safety
 edit_uri: edit/main/docs/
 
 copyright: Copyright &copy; 2024 Laurent Giovannoni
