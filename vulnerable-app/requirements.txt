@@ -76,7 +76,7 @@ cryptography==2.3
 # lxml 4.4.0 has:
 # - CVE-2020-27783 (XSS via clean function)
 # - CVE-2021-28957 (XSS via HTML5 parser)
-lxml==4.4.0
+lxml==6.0.2
 
 # defusedxml is safe, but we're not using it properly
 defusedxml>=0.7.0
