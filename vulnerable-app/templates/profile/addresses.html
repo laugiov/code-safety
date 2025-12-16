@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}My Addresses - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>My Addresses</h2>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Saved Addresses</h5>
+                <a href="{% url 'profile:add_address' %}" class="btn btn-primary btn-sm">Add New Address</a>
+            </div>
+            <div class="card-body">
+                {% if addresses %}
+                <div class="row">
+                    {% for address in addresses %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between">
+                                <span>
+                                    {{ address.label }}
+                                    {% if address.is_default %}
+                                    <span class="badge bg-primary">Default</span>
+                                    {% endif %}
+                                </span>
+                                <span class="badge bg-secondary">{{ address.address_type }}</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="mb-1"><strong>{{ address.name }}</strong></p>
+                                <p class="mb-1">{{ address.street_address }}</p>
+                                <p class="mb-1">{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                <p class="mb-0">{{ address.country }}</p>
+                                {% if address.phone %}
+                                <p class="mb-0"><small class="text-muted">{{ address.phone }}</small></p>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer">
+                                <a href="{% url 'profile:delete_address' address_id=address.id %}"
+                                   class="btn btn-outline-danger btn-sm"
+                                   onclick="return confirm('Delete this address?');">Delete</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No addresses saved.</p>
+                <a href="{% url 'profile:add_address' %}" class="btn btn-primary">Add Address</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+# Sensitive Data Logging Detection Rules
+# Detects logging of sensitive information
+#
+# CWE-532: Insertion of Sensitive Information into Log File
+# OWASP A09:2021 - Security Logging and Monitoring Failures
+
+rules:
+  # ==============================================================================
+  # Logging Request Data (Passwords, Tokens)
+  # ==============================================================================
+  - id: sensitive-data-logging-request
+    message: >-
+      Sensitive data may be logged. Logging HTTP request data (POST, COOKIES)
+      can expose passwords, tokens, and other sensitive information in log files.
+
+      Avoid logging: passwords, tokens, credit cards, SSN, API keys
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: MEDIUM
+      likelihood: MEDIUM
+      impact: MEDIUM
+      references:
+        - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/05-Testing_for_Session_Tokens_Leaked_in_Log_Files
+    patterns:
+      - pattern-either:
+          # Logging entire POST data
+          - pattern: logging.info(..., request.POST, ...)
+          - pattern: logging.info(..., dict(request.POST), ...)
+          - pattern: logging.info(f"...{request.POST}...")
+          - pattern: logging.debug(..., request.POST, ...)
+          - pattern: logging.debug(f"...{request.POST}...")
+          - pattern: logger.info(..., request.POST, ...)
+          - pattern: logger.info(f"...{request.POST}...")
+          - pattern: logger.debug(..., request.POST, ...)
+          # Logging cookies
+          - pattern: logging.info(..., request.COOKIES, ...)
+          - pattern: logging.info(f"...{request.COOKIES}...")
+          - pattern: logger.info(..., request.COOKIES, ...)
+          # Logging entire request
+          - pattern: logging.info(f"...{request}...")
+          - pattern: logger.info(f"...{request}...")
+
+  # ==============================================================================
+  # Logging Password Fields
+  # ==============================================================================
+  - id: sensitive-data-logging-password
+    message: >-
+      Password may be logged. Never log passwords or authentication credentials.
+      This exposes user credentials in log files.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          # Direct password logging
+          - pattern: logging.$LEVEL(..., $PASSWORD, ...)
+          - pattern: logging.$LEVEL(f"...{$PASSWORD}...")
+          - pattern: logger.$LEVEL(..., $PASSWORD, ...)
+          - pattern: logger.$LEVEL(f"...{$PASSWORD}...")
+          - pattern: print($PASSWORD)
+          - pattern: print(f"...{$PASSWORD}...")
+      - metavariable-regex:
+          metavariable: $PASSWORD
+          regex: '.*(password|passwd|pwd|secret|token|credential|api_key).*'
+          ignore-case: true
+
+  # ==============================================================================
+  # Logging Credit Card Data
+  # ==============================================================================
+  - id: sensitive-data-logging-credit-card
+    message: >-
+      Credit card data may be logged. Logging payment card data violates
+      PCI-DSS requirements and exposes customer financial information.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      subcategory:
+        - pci-dss
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: logging.$LEVEL(..., $CARD, ...)
+          - pattern: logging.$LEVEL(f"...{$CARD}...")
+          - pattern: logger.$LEVEL(..., $CARD, ...)
+      - metavariable-regex:
+          metavariable: $CARD
+          regex: '.*(card_number|card_num|cvv|cvc|credit_card|cc_number).*'
+          ignore-case: true
+
+  # ==============================================================================
+  # Logging Session Data
+  # ==============================================================================
+  - id: sensitive-data-logging-session
+    message: >-
+      Session data may be logged. Session tokens in logs can be used for
+      session hijacking attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: logging.$LEVEL(..., request.session, ...)
+          - pattern: logging.$LEVEL(f"...{request.session}...")
+          - pattern: logger.$LEVEL(..., request.session, ...)
+          - pattern: logger.$LEVEL(f"...{request.session}...")
+          - pattern: logging.$LEVEL(..., $SESSION_KEY, ...)
+      - metavariable-regex:
+          metavariable: $SESSION_KEY
+          regex: '.*(session_id|session_key|sessionid).*'
+          ignore-case: true
+
+  # ==============================================================================
+  # Logging User Objects (May Contain Passwords)
+  # ==============================================================================
+  - id: sensitive-data-logging-user-object
+    message: >-
+      User object may be logged. User objects often contain password hashes
+      or other sensitive fields. Log only necessary fields.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: logging.$LEVEL(..., $USER.__dict__, ...)
+          - pattern: logging.$LEVEL(f"...{$USER.__dict__}...")
+          - pattern: logger.$LEVEL(f"User: {$USER}")
+
+  # ==============================================================================
+  # print() with Sensitive Data (Debug Statements)
+  # ==============================================================================
+  - id: sensitive-data-print-debug
+    message: >-
+      Sensitive data in print() statement. Print statements may be left in
+      production code and expose sensitive data to logs or console.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: print(request.POST)
+          - pattern: print(dict(request.POST))
+          - pattern: print(f"...{request.POST}...")
+          - pattern: print(request.COOKIES)
+          - pattern: print($PASSWORD)
+      - metavariable-regex:
+          metavariable: $PASSWORD
+          regex: '.*(password|secret|token).*'
+          ignore-case: true
+
+  # ==============================================================================
+  # Exception Logging with Sensitive Data
+  # ==============================================================================
+  - id: sensitive-data-exception-logging
+    message: >-
+      Sensitive data may be exposed in exception logs. Exception messages
+      might contain user input or sensitive context.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-532"
+      owasp: "A09:2021"
+      category: security
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: |
+              except $EXCEPTION as $E:
+                ...
+                logging.exception(..., $SENSITIVE, ...)
+          - pattern: |
+              except $EXCEPTION as $E:
+                ...
+                logger.exception(..., $SENSITIVE, ...)
+      - metavariable-regex:
+          metavariable: $SENSITIVE
+          regex: '.*(password|secret|token|credential).*'
+          ignore-case: true

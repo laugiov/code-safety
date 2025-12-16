@@ -1,0 +1,220 @@
+# Insecure Direct Object Reference (IDOR) Detection Rules
+# Detects potential IDOR vulnerabilities
+#
+# CWE-639: Authorization Bypass Through User-Controlled Key
+# OWASP A01:2021 - Broken Access Control
+
+rules:
+  # ==============================================================================
+  # Direct Object Access Without Authorization Check
+  # ==============================================================================
+  - id: django-idor-direct-object-access
+    message: >-
+      Potential IDOR vulnerability: Object retrieved using user-supplied ID
+      without apparent authorization check. Ensure the current user has
+      permission to access this object.
+
+      Vulnerable: Model.objects.get(pk=user_input)
+      Safe: Model.objects.get(pk=user_input, owner=request.user)
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      technology:
+        - django
+      confidence: LOW
+      likelihood: MEDIUM
+      impact: HIGH
+      references:
+        - https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References
+    patterns:
+      - pattern-either:
+          # Direct PK from request
+          - pattern: |
+              $ID = request.GET.get(...)
+              ...
+              $MODEL.objects.get(pk=$ID)
+          - pattern: |
+              $ID = request.POST.get(...)
+              ...
+              $MODEL.objects.get(pk=$ID)
+          - pattern: |
+              $ID = request.GET[...]
+              ...
+              $MODEL.objects.get(pk=$ID)
+          - pattern: |
+              $ID = request.POST[...]
+              ...
+              $MODEL.objects.get(pk=$ID)
+          # ID parameter in view
+          - pattern: |
+              def $FUNC(request, $ID):
+                ...
+                $MODEL.objects.get(pk=$ID)
+          - pattern: |
+              def $FUNC(request, $ID):
+                ...
+                $MODEL.objects.get(id=$ID)
+      # Exclude patterns that include owner/user checks
+      - pattern-not: $MODEL.objects.get(..., owner=request.user, ...)
+      - pattern-not: $MODEL.objects.get(..., user=request.user, ...)
+      - pattern-not: $MODEL.objects.filter(...).get(...)
+
+  # ==============================================================================
+  # Missing Authorization in Profile/Account Views
+  # ==============================================================================
+  - id: django-idor-profile-access
+    message: >-
+      Potential IDOR in profile access: Accessing user profile using
+      URL parameter without verifying the requester owns this profile.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def $FUNC(request, $USER_ID):
+                ...
+                User.objects.get(pk=$USER_ID)
+                ...
+          - pattern: |
+              def $FUNC(request, $USER_ID):
+                ...
+                UserProfile.objects.get(user_id=$USER_ID)
+                ...
+          - pattern: |
+              def $FUNC(request, $PROFILE_ID):
+                ...
+                Profile.objects.get(pk=$PROFILE_ID)
+                ...
+      # Must NOT have an authorization check
+      - pattern-not-inside: |
+          def $FUNC(request, $ID):
+            ...
+            if request.user.id != $ID:
+              ...
+      - pattern-not-inside: |
+          def $FUNC(request, $ID):
+            ...
+            if $ID != request.user.id:
+              ...
+
+  # ==============================================================================
+  # Order/Payment Access Without Owner Check
+  # ==============================================================================
+  - id: django-idor-order-access
+    message: >-
+      Potential IDOR in order/payment access: Sensitive financial data
+      accessed without verifying ownership. Always check user authorization.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def $FUNC(request, $ORDER_ID):
+                ...
+                Order.objects.get(pk=$ORDER_ID)
+          - pattern: |
+              def $FUNC(request, $ORDER_ID):
+                ...
+                Payment.objects.get(order_id=$ORDER_ID)
+          - pattern: |
+              $ORDER_ID = request.$METHOD.get(...)
+              ...
+              Order.objects.get(pk=$ORDER_ID)
+      - pattern-not: Order.objects.get(..., user=request.user, ...)
+      - pattern-not: Order.objects.get(..., customer=request.user, ...)
+
+  # ==============================================================================
+  # get_object_or_404 Without Authorization
+  # ==============================================================================
+  - id: django-idor-get-object-or-404
+    message: >-
+      Potential IDOR: get_object_or_404 used with user-supplied ID
+      without owner/user constraint. Consider adding user=request.user.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: get_object_or_404($MODEL, pk=$ID)
+          - pattern: get_object_or_404($MODEL, id=$ID)
+      - pattern-not: get_object_or_404($MODEL, ..., user=request.user, ...)
+      - pattern-not: get_object_or_404($MODEL, ..., owner=request.user, ...)
+
+  # ==============================================================================
+  # DRF ViewSet Without Permission Check
+  # ==============================================================================
+  - id: drf-idor-missing-permission
+    message: >-
+      Potential IDOR in DRF ViewSet: Custom retrieve/update/destroy method
+      accesses object without explicit permission check.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      technology:
+        - django-rest-framework
+      confidence: LOW
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def retrieve(self, request, pk=None):
+                ...
+                self.queryset.get(pk=pk)
+          - pattern: |
+              def update(self, request, pk=None):
+                ...
+                $MODEL.objects.get(pk=pk)
+      - pattern-not-inside: |
+          def $METHOD(self, request, pk=None):
+            ...
+            self.check_object_permissions(request, ...)
+
+  # ==============================================================================
+  # URL Parameter to Sensitive Query (Taint Mode)
+  # ==============================================================================
+  - id: django-idor-taint
+    message: >-
+      IDOR risk: User-controlled parameter flows to database query
+      for potentially sensitive data without visible authorization check.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-639"
+      owasp: "A01:2021"
+      category: security
+      confidence: LOW
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+    pattern-sinks:
+      - pattern: $MODEL.objects.get(pk=$ID)
+        focus-metavariable: $ID
+      - pattern: $MODEL.objects.get(id=$ID)
+        focus-metavariable: $ID
+      - pattern: $MODEL.objects.filter(pk=$ID)
+        focus-metavariable: $ID
+    pattern-sanitizers:
+      - pattern: request.user.id
+      - pattern: request.user.pk

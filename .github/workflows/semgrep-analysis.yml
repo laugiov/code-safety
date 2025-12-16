@@ -1,0 +1,116 @@
+# =============================================================================
+# Semgrep Analysis Workflow
+# =============================================================================
+# Runs Semgrep pattern-based static analysis on the VulnShop application.
+
+name: Semgrep
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/semgrep/**'
+      - '.github/workflows/semgrep-analysis.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/semgrep/**'
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sunday at 02:00 UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  semgrep:
+    name: Semgrep Analysis
+    runs-on: ubuntu-latest
+
+    container:
+      image: semgrep/semgrep
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep with custom rules
+        id: semgrep
+        run: |
+          echo "Running Semgrep analysis..."
+
+          semgrep scan \
+            --config analysis/semgrep/rules/ \
+            --config "p/python" \
+            --config "p/django" \
+            --config "p/owasp-top-ten" \
+            --sarif \
+            --output analysis/semgrep/results/semgrep_results.sarif \
+            --json-output analysis/semgrep/results/semgrep_results.json \
+            --verbose \
+            vulnerable-app/ \
+            2>&1 | tee analysis/semgrep/results/semgrep_output.log || true
+
+          # Count findings
+          if [ -f analysis/semgrep/results/semgrep_results.json ]; then
+            FINDING_COUNT=$(cat analysis/semgrep/results/semgrep_results.json | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('results', [])))" 2>/dev/null || echo "0")
+            echo "finding_count=$FINDING_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "finding_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: analysis/semgrep/results/semgrep_results.sarif
+          category: semgrep
+        continue-on-error: true
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: |
+            analysis/semgrep/results/
+          retention-days: 30
+
+      - name: Generate summary
+        run: |
+          echo "## Semgrep Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Findings | ${{ steps.semgrep.outputs.finding_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Rules Used" >> $GITHUB_STEP_SUMMARY
+          echo "- Custom rules: \`analysis/semgrep/rules/\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Registry: \`p/python\`, \`p/django\`, \`p/owasp-top-ten\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed results in the [Security tab](../security/code-scanning)." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const findingCount = '${{ steps.semgrep.outputs.finding_count }}';
+            const body = `## Semgrep Analysis Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Findings | ${findingCount} |
+
+            **Rules Used:**
+            - Custom rules from \`analysis/semgrep/rules/\`
+            - Registry packs: \`p/python\`, \`p/django\`, \`p/owasp-top-ten\`
+
+            View detailed results in the [Security tab](../security/code-scanning).
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+        continue-on-error: true

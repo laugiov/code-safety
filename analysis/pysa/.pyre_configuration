@@ -1,0 +1,25 @@
+{
+  "site_package_search_strategy": "pep561",
+  "source_directories": [
+    {"root": "../../vulnerable-app", "subdirectory": "."}
+  ],
+  "search_path": [
+    {"site-package": "django"},
+    {"site-package": "djangorestframework"},
+    {"site-package": "requests"},
+    {"site-package": "lxml"},
+    {"site-package": "PIL"}
+  ],
+  "taint_models_path": ["models"],
+  "exclude": [
+    ".*/migrations/.*",
+    ".*/tests/.*",
+    ".*__pycache__.*",
+    ".*/fixtures/.*"
+  ],
+  "workers": 4,
+  "strict": false,
+  "ignore_all_errors": [
+    "../../vulnerable-app/manage.py"
+  ]
+}

@@ -1,0 +1,87 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+
+updates:
+  # Python dependencies for VulnShop
+  # Note: VulnShop intentionally uses vulnerable dependencies
+  # Dependabot alerts will be triaged but not auto-merged
+  - package-ecosystem: "pip"
+    directory: "/vulnerable-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "python"
+      - "security-review-required"
+    commit-message:
+      prefix: "deps(vulnshop)"
+    open-pull-requests-limit: 5
+    # Don't auto-update - vulnerabilities are intentional
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+
+  # Python dev dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "python"
+      - "dev-dependencies"
+    commit-message:
+      prefix: "deps(dev)"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "ci"
+      - "github-actions"
+    commit-message:
+      prefix: "ci(deps)"
+    open-pull-requests-limit: 5
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/vulnerable-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker(deps)"
+    open-pull-requests-limit: 3
+
+  # npm for documentation tools (if used)
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "documentation"
+      - "npm"
+    commit-message:
+      prefix: "docs(deps)"
+    open-pull-requests-limit: 3

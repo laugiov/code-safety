@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Latest Reviews - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Latest Reviews</h2>
+
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-warning">
+            <strong>V04:</strong> Reviews are rendered with mark_safe() making them vulnerable to Stored XSS.
+        </div>
+
+        {% if reviews %}
+        <div class="row">
+            {% for review in reviews %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between">
+                        <span>
+                            <a href="{% url 'catalog:product_detail' slug=review.product.slug %}">
+                                {{ review.product.name }}
+                            </a>
+                        </span>
+                        <span class="text-warning">{{ review.stars }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <!-- VULNERABLE: Rendering unsanitized HTML -->
+                            {{ review.comment_html }}
+                        </p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            By {{ review.user.username }} on {{ review.created_at|date:"M d, Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No reviews yet. Be the first to review a product!
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

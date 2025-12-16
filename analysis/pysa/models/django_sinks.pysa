@@ -1,0 +1,654 @@
+# Django and Python Security Sinks
+# These define dangerous operations where tainted data should not flow
+# Reference: https://pyre-check.org/docs/pysa-basics/
+
+# ==============================================================================
+# SQL Injection Sinks (CWE-89)
+# ==============================================================================
+
+# Django raw SQL execution
+def django.db.connection.cursor.execute(
+    self,
+    sql: TaintSink[SQL],
+    params = None
+): ...
+
+def django.db.connection.cursor.executemany(
+    self,
+    sql: TaintSink[SQL],
+    params_list
+): ...
+
+# Raw queries on managers
+def django.db.models.Manager.raw(
+    self,
+    raw_query: TaintSink[SQL],
+    params = None,
+    translations = None
+): ...
+
+def django.db.models.QuerySet.raw(
+    self,
+    raw_query: TaintSink[SQL],
+    params = None,
+    translations = None
+): ...
+
+# Extra clauses (deprecated but still used)
+def django.db.models.QuerySet.extra(
+    self,
+    select: TaintSink[SQL] = None,
+    where: TaintSink[SQL] = None,
+    params = None,
+    tables = None,
+    order_by = None,
+    select_params = None
+): ...
+
+# ==============================================================================
+# Cross-Site Scripting Sinks (CWE-79)
+# ==============================================================================
+
+# Django mark_safe - bypasses auto-escaping
+def django.utils.safestring.mark_safe(
+    s: TaintSink[XSS]
+): ...
+
+def django.utils.html.format_html(
+    format_string: TaintSink[XSS],
+    *args,
+    **kwargs
+): ...
+
+# Template rendering with user content
+def django.template.Template.__init__(
+    self,
+    template_string: TaintSink[TemplateInjection, RemoteCodeExecution]
+): ...
+
+def django.template.engines.__getitem__(
+    self,
+    alias
+).from_string(
+    template_code: TaintSink[TemplateInjection]
+): ...
+
+# JSON response without proper escaping
+def django.http.JsonResponse.__init__(
+    self,
+    data: TaintSink[XSS],
+    encoder = None,
+    safe = True,
+    json_dumps_params = None
+): ...
+
+# ==============================================================================
+# Command Injection Sinks (CWE-78)
+# ==============================================================================
+
+# os module
+def os.system(
+    command: TaintSink[CommandExecution]
+): ...
+
+def os.popen(
+    cmd: TaintSink[CommandExecution],
+    mode = "r",
+    buffering = -1
+): ...
+
+def os.execl(
+    path: TaintSink[CommandExecution],
+    arg0,
+    *args
+): ...
+
+def os.execle(
+    path: TaintSink[CommandExecution],
+    arg0,
+    *args
+): ...
+
+def os.execlp(
+    file: TaintSink[CommandExecution],
+    arg0,
+    *args
+): ...
+
+def os.execv(
+    path: TaintSink[CommandExecution],
+    args
+): ...
+
+def os.execve(
+    path: TaintSink[CommandExecution],
+    args,
+    env
+): ...
+
+def os.execvp(
+    file: TaintSink[CommandExecution],
+    args: TaintSink[CommandExecution]
+): ...
+
+def os.spawnl(
+    mode,
+    path: TaintSink[CommandExecution],
+    *args
+): ...
+
+def os.spawnle(
+    mode,
+    path: TaintSink[CommandExecution],
+    *args
+): ...
+
+def os.spawnlp(
+    mode,
+    file: TaintSink[CommandExecution],
+    *args
+): ...
+
+def os.spawnv(
+    mode,
+    path: TaintSink[CommandExecution],
+    args: TaintSink[CommandExecution]
+): ...
+
+def os.spawnve(
+    mode,
+    path: TaintSink[CommandExecution],
+    args: TaintSink[CommandExecution],
+    env
+): ...
+
+# subprocess module
+def subprocess.call(
+    args: TaintSink[CommandExecution],
+    bufsize = -1,
+    executable = None,
+    stdin = None,
+    stdout = None,
+    stderr = None,
+    preexec_fn = None,
+    close_fds = True,
+    shell = False,
+    cwd = None,
+    env = None
+): ...
+
+def subprocess.run(
+    args: TaintSink[CommandExecution],
+    capture_output = False,
+    timeout = None,
+    check = False,
+    **kwargs
+): ...
+
+def subprocess.Popen.__init__(
+    self,
+    args: TaintSink[CommandExecution],
+    bufsize = -1,
+    executable = None,
+    stdin = None,
+    stdout = None,
+    stderr = None,
+    preexec_fn = None,
+    close_fds = True,
+    shell = False,
+    cwd = None,
+    env = None
+): ...
+
+def subprocess.check_output(
+    args: TaintSink[CommandExecution],
+    bufsize = -1,
+    executable = None,
+    stdin = None,
+    stderr = None,
+    shell = False,
+    cwd = None,
+    env = None,
+    timeout = None
+): ...
+
+def subprocess.check_call(
+    args: TaintSink[CommandExecution],
+    bufsize = -1,
+    executable = None,
+    stdin = None,
+    stdout = None,
+    stderr = None,
+    shell = False,
+    cwd = None,
+    env = None,
+    timeout = None
+): ...
+
+# ==============================================================================
+# Server-Side Request Forgery Sinks (CWE-918)
+# ==============================================================================
+
+# requests library
+def requests.get(
+    url: TaintSink[SSRF],
+    params = None,
+    **kwargs
+): ...
+
+def requests.post(
+    url: TaintSink[SSRF],
+    data = None,
+    json = None,
+    **kwargs
+): ...
+
+def requests.put(
+    url: TaintSink[SSRF],
+    data = None,
+    **kwargs
+): ...
+
+def requests.delete(
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.patch(
+    url: TaintSink[SSRF],
+    data = None,
+    **kwargs
+): ...
+
+def requests.head(
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.options(
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.request(
+    method,
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.Session.get(
+    self,
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.Session.post(
+    self,
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+def requests.Session.request(
+    self,
+    method,
+    url: TaintSink[SSRF],
+    **kwargs
+): ...
+
+# urllib
+def urllib.request.urlopen(
+    url: TaintSink[SSRF],
+    data = None,
+    timeout = None,
+    cafile = None,
+    capath = None,
+    cadefault = False,
+    context = None
+): ...
+
+def urllib.request.Request.__init__(
+    self,
+    url: TaintSink[SSRF],
+    data = None,
+    headers = {},
+    origin_req_host = None,
+    unverifiable = False,
+    method = None
+): ...
+
+# http.client
+def http.client.HTTPConnection.__init__(
+    self,
+    host: TaintSink[SSRF],
+    port = None,
+    timeout = None,
+    source_address = None,
+    blocksize = 8192
+): ...
+
+def http.client.HTTPSConnection.__init__(
+    self,
+    host: TaintSink[SSRF],
+    port = None,
+    timeout = None,
+    source_address = None,
+    context = None,
+    blocksize = 8192
+): ...
+
+# ==============================================================================
+# Path Traversal / File System Sinks (CWE-22)
+# ==============================================================================
+
+def builtins.open(
+    file: TaintSink[FileSystem],
+    mode = "r",
+    buffering = -1,
+    encoding = None,
+    errors = None,
+    newline = None,
+    closefd = True,
+    opener = None
+): ...
+
+def io.open(
+    file: TaintSink[FileSystem],
+    mode = "r",
+    buffering = -1,
+    encoding = None,
+    errors = None,
+    newline = None,
+    closefd = True,
+    opener = None
+): ...
+
+def os.path.join(
+    path: TaintSink[FileSystem],
+    *paths: TaintSink[FileSystem]
+): ...
+
+def pathlib.Path.__truediv__(
+    self,
+    key: TaintSink[FileSystem]
+): ...
+
+def pathlib.Path.joinpath(
+    self,
+    *args: TaintSink[FileSystem]
+): ...
+
+def os.remove(
+    path: TaintSink[FileSystem]
+): ...
+
+def os.unlink(
+    path: TaintSink[FileSystem]
+): ...
+
+def os.rmdir(
+    path: TaintSink[FileSystem]
+): ...
+
+def shutil.rmtree(
+    path: TaintSink[FileSystem],
+    ignore_errors = False,
+    onerror = None
+): ...
+
+def shutil.copy(
+    src: TaintSink[FileSystem],
+    dst: TaintSink[FileSystem]
+): ...
+
+def shutil.move(
+    src: TaintSink[FileSystem],
+    dst: TaintSink[FileSystem]
+): ...
+
+# ==============================================================================
+# Insecure Deserialization Sinks (CWE-502)
+# ==============================================================================
+
+# pickle - extremely dangerous
+def pickle.loads(
+    data: TaintSink[Deserialization]
+): ...
+
+def pickle.load(
+    file: TaintSink[Deserialization]
+): ...
+
+def _pickle.loads(
+    data: TaintSink[Deserialization]
+): ...
+
+# yaml unsafe loading
+def yaml.load(
+    stream: TaintSink[Deserialization],
+    Loader = None
+): ...
+
+def yaml.unsafe_load(
+    stream: TaintSink[Deserialization]
+): ...
+
+def yaml.full_load(
+    stream: TaintSink[Deserialization]
+): ...
+
+# marshal - similar to pickle
+def marshal.loads(
+    bytes: TaintSink[Deserialization]
+): ...
+
+def marshal.load(
+    file: TaintSink[Deserialization]
+): ...
+
+# shelve - uses pickle
+def shelve.open(
+    filename: TaintSink[Deserialization],
+    flag = "c",
+    protocol = None,
+    writeback = False
+): ...
+
+# jsonpickle
+def jsonpickle.decode(
+    string: TaintSink[Deserialization],
+    backend = None,
+    context = None,
+    keys = False,
+    reset = True,
+    safe = False,
+    classes = None
+): ...
+
+# ==============================================================================
+# XML External Entity Injection Sinks (CWE-611)
+# ==============================================================================
+
+# lxml - vulnerable by default
+def lxml.etree.fromstring(
+    text: TaintSink[XMLParser],
+    parser = None,
+    base_url = None
+): ...
+
+def lxml.etree.parse(
+    source: TaintSink[XMLParser],
+    parser = None,
+    base_url = None
+): ...
+
+def lxml.etree.XML(
+    text: TaintSink[XMLParser],
+    parser = None,
+    base_url = None
+): ...
+
+# xml.etree.ElementTree
+def xml.etree.ElementTree.fromstring(
+    text: TaintSink[XMLParser],
+    parser = None
+): ...
+
+def xml.etree.ElementTree.parse(
+    source: TaintSink[XMLParser],
+    parser = None
+): ...
+
+def xml.etree.ElementTree.XML(
+    text: TaintSink[XMLParser],
+    parser = None
+): ...
+
+# xml.dom.minidom
+def xml.dom.minidom.parseString(
+    string: TaintSink[XMLParser]
+): ...
+
+def xml.dom.minidom.parse(
+    file: TaintSink[XMLParser],
+    parser = None,
+    bufsize = None
+): ...
+
+# xml.sax
+def xml.sax.parseString(
+    string: TaintSink[XMLParser],
+    handler,
+    errorHandler = None
+): ...
+
+def xml.sax.parse(
+    source: TaintSink[XMLParser],
+    handler,
+    errorHandler = None
+): ...
+
+# ==============================================================================
+# Logging Sinks (CWE-532)
+# ==============================================================================
+
+def logging.info(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.debug(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.warning(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.error(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.critical(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.exception(
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.Logger.info(
+    self,
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.Logger.debug(
+    self,
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.Logger.warning(
+    self,
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+def logging.Logger.error(
+    self,
+    msg: TaintSink[Logging],
+    *args,
+    **kwargs
+): ...
+
+# ==============================================================================
+# Code Execution Sinks (CWE-94)
+# ==============================================================================
+
+def builtins.eval(
+    expression: TaintSink[RemoteCodeExecution],
+    globals = None,
+    locals = None
+): ...
+
+def builtins.exec(
+    object: TaintSink[RemoteCodeExecution],
+    globals = None,
+    locals = None
+): ...
+
+def builtins.compile(
+    source: TaintSink[RemoteCodeExecution],
+    filename,
+    mode,
+    flags = 0,
+    dont_inherit = False,
+    optimize = -1
+): ...
+
+def builtins.__import__(
+    name: TaintSink[RemoteCodeExecution],
+    globals = None,
+    locals = None,
+    fromlist = (),
+    level = 0
+): ...
+
+# ==============================================================================
+# Redirect Sinks (CWE-601)
+# ==============================================================================
+
+def django.shortcuts.redirect(
+    to: TaintSink[Redirect],
+    *args,
+    permanent = False,
+    **kwargs
+): ...
+
+def django.http.HttpResponseRedirect.__init__(
+    self,
+    redirect_to: TaintSink[Redirect],
+    *args,
+    **kwargs
+): ...
+
+def django.http.HttpResponsePermanentRedirect.__init__(
+    self,
+    redirect_to: TaintSink[Redirect],
+    *args,
+    **kwargs
+): ...

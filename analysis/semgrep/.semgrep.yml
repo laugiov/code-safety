@@ -1,0 +1,23 @@
+# Semgrep Configuration for VulnShop
+# Main configuration file for Semgrep analysis
+#
+# This configuration sets up:
+# - Custom rules for VulnShop vulnerabilities
+# - Community rules for Python and Django
+# - OWASP Top 10 detection rules
+#
+# Usage:
+#   semgrep scan --config .semgrep.yml ../../vulnerable-app/
+
+rules:
+  # Include all custom rules from the rules directory
+  - id: vulnshop-custom-rules
+    paths:
+      include:
+        - "../../vulnerable-app/**/*.py"
+      exclude:
+        - "**/migrations/**"
+        - "**/tests/**"
+        - "**/__pycache__/**"
+        - "**/venv/**"
+        - "**/fixtures/**"

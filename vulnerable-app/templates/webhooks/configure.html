@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Configure Webhooks - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Webhook Configuration</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Webhook Endpoints
+            </div>
+            <div class="card-body">
+                <p>Configure webhooks to receive notifications about store events.</p>
+
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>order.created</td>
+                            <td>Triggered when a new order is placed</td>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>order.shipped</td>
+                            <td>Triggered when an order is shipped</td>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                        <tr>
+                            <td>user.registered</td>
+                            <td>Triggered when a new user registers</td>
+                            <td><span class="badge bg-secondary">Inactive</span></td>
+                        </tr>
+                        <tr>
+                            <td>review.created</td>
+                            <td>Triggered when a new review is posted</td>
+                            <td><span class="badge bg-secondary">Inactive</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        Test Webhook (V09)
+                    </div>
+                    <div class="card-body">
+                        <p>Test connectivity to a webhook URL.</p>
+                        <div class="alert alert-warning small">
+                            <strong>Warning:</strong> Vulnerable to SSRF
+                        </div>
+                        <a href="{% url 'webhooks:test' %}" class="btn btn-danger">Test Webhook</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        URL Preview
+                    </div>
+                    <div class="card-body">
+                        <p>Generate a preview of any URL.</p>
+                        <a href="{% url 'webhooks:preview' %}" class="btn btn-primary">URL Preview</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                Receive Webhook
+            </div>
+            <div class="card-body">
+                <p>Your webhook receive endpoint:</p>
+                <code>POST {{ request.scheme }}://{{ request.get_host }}/webhooks/receive/</code>
+
+                <h6 class="mt-3">Example Payload:</h6>
+                <pre class="bg-dark text-light p-3 rounded"><code>{
+    "event": "order.created",
+    "data": {
+        "order_id": "VS-12345678",
+        "total": 99.99,
+        "customer": "john@example.com"
+    },
+    "timestamp": "2024-01-15T10:30:00Z"
+}</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

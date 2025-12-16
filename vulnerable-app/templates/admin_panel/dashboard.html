@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Panel - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>Admin Panel</h2>
+
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V05 & V06:</strong> This panel contains Command Injection and Path Traversal vulnerabilities.
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        System Tools (V05)
+                    </div>
+                    <div class="card-body">
+                        <p>Run system diagnostics and network tests.</p>
+                        <a href="{% url 'admin_panel:system_info' %}" class="btn btn-outline-danger">
+                            System Info
+                        </a>
+                        <a href="{% url 'admin_panel:diagnostics' %}" class="btn btn-outline-danger">
+                            Diagnostics
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        File Manager (V06)
+                    </div>
+                    <div class="card-body">
+                        <p>Browse and download files from the server.</p>
+                        <a href="{% url 'admin_panel:file_manager' %}" class="btn btn-outline-warning">
+                            Open File Manager
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        Server Logs
+                    </div>
+                    <div class="card-body">
+                        <p>View application and server logs.</p>
+                        <a href="{% url 'admin_panel:logs' %}" class="btn btn-outline-info">
+                            View Logs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

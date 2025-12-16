@@ -1,0 +1,180 @@
+# Server-Side Template Injection (SSTI) Detection Rules
+# Detects template injection patterns in Python web applications
+#
+# CWE-1336: Improper Neutralization of Special Elements Used in a Template Engine
+# OWASP A03:2021 - Injection
+
+rules:
+  # ==============================================================================
+  # Django Template() with User Input
+  # ==============================================================================
+  - id: django-ssti-template
+    message: >-
+      Server-Side Template Injection (SSTI) vulnerability: User input used to
+      construct a Django Template. Attackers can inject template code to access
+      sensitive data or execute arbitrary code.
+
+      Vulnerable: Template(user_input).render(context)
+      Safe: Use pre-defined template files, never construct templates from user input
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - django
+      confidence: HIGH
+      likelihood: HIGH
+      impact: CRITICAL
+      references:
+        - https://portswigger.net/web-security/server-side-template-injection
+        - https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection
+    patterns:
+      - pattern-either:
+          # Direct Template construction
+          - pattern: Template($USER_INPUT)
+          - pattern: Template($USER_INPUT).render(...)
+          - pattern: |
+              from django.template import Template
+              ...
+              Template($USER_INPUT)
+          # Variable then Template
+          - pattern: |
+              $TEMPLATE_STR = request.$METHOD.get(...)
+              ...
+              Template($TEMPLATE_STR)
+          - pattern: |
+              $TEMPLATE_STR = request.$METHOD[...]
+              ...
+              Template($TEMPLATE_STR)
+
+  # ==============================================================================
+  # Jinja2 Template() with User Input
+  # ==============================================================================
+  - id: jinja2-ssti
+    message: >-
+      SSTI vulnerability: User input passed to Jinja2 Template constructor.
+      This allows execution of arbitrary Jinja2 expressions.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - jinja2
+        - flask
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: jinja2.Template($USER_INPUT)
+          - pattern: jinja2.Template($USER_INPUT).render(...)
+          - pattern: |
+              $TEMPLATE_STR = request.$METHOD.get(...)
+              ...
+              jinja2.Template($TEMPLATE_STR)
+
+  # ==============================================================================
+  # Flask render_template_string()
+  # ==============================================================================
+  - id: flask-ssti-render-template-string
+    message: >-
+      SSTI vulnerability: User input passed to render_template_string().
+      This renders the string as a Jinja2 template, allowing code execution.
+
+      Vulnerable: render_template_string(user_input)
+      Safe: Use render_template() with .html files
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - flask
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: render_template_string($USER_INPUT)
+          - pattern: render_template_string($USER_INPUT, ...)
+          - pattern: |
+              $TEMPLATE = request.$METHOD.get(...)
+              ...
+              render_template_string($TEMPLATE)
+
+  # ==============================================================================
+  # Environment.from_string()
+  # ==============================================================================
+  - id: jinja2-ssti-from-string
+    message: >-
+      SSTI: User input passed to Environment.from_string() creates a template
+      from untrusted content, allowing template injection attacks.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: $ENV.from_string($USER_INPUT)
+          - pattern: |
+              $TEMPLATE_STR = request.$METHOD.get(...)
+              ...
+              $ENV.from_string($TEMPLATE_STR)
+
+  # ==============================================================================
+  # Mako Template
+  # ==============================================================================
+  - id: mako-ssti
+    message: >-
+      SSTI vulnerability: User input used in Mako Template construction.
+      Mako templates can execute arbitrary Python code.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - mako
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: mako.template.Template($USER_INPUT)
+          - pattern: Template($USER_INPUT, ...)
+
+  # ==============================================================================
+  # Request Data to Template (Full Taint Flow)
+  # ==============================================================================
+  - id: python-request-to-ssti
+    message: >-
+      SSTI: HTTP request data flows to template construction.
+      Never create templates from user-controlled strings.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-1336"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+      - pattern: request.data.get(...)
+      - pattern: request.form.get(...)
+      - pattern: request.args.get(...)
+    pattern-sinks:
+      - pattern: Template($INPUT)
+        focus-metavariable: $INPUT
+      - pattern: jinja2.Template($INPUT)
+        focus-metavariable: $INPUT
+      - pattern: render_template_string($INPUT, ...)
+        focus-metavariable: $INPUT
+      - pattern: $ENV.from_string($INPUT)
+        focus-metavariable: $INPUT

@@ -1,0 +1,419 @@
+# VulnShop Taint Flow Definitions
+# Detailed source-to-sink flows for benchmarking precision
+#
+# This file maps each vulnerability to its exact taint propagation path,
+# enabling precise comparison of tool detection capabilities.
+
+version: "1.0.0"
+
+# ==============================================================================
+# Taint Flow Definitions
+# ==============================================================================
+
+flows:
+  # ---------------------------------------------------------------------------
+  # SQL Injection Flows
+  # ---------------------------------------------------------------------------
+  - id: FLOW-SQL-001
+    vulnerability_id: VULN-001
+    name: "SQL Injection via Login Username"
+    source:
+      type: http_request
+      method: POST
+      parameter: username
+      code: "request.POST.get('username')"
+      file: authentication/views.py
+      line: 26
+    propagation:
+      - step: 1
+        description: "Assigned to local variable"
+        code: "username = request.POST.get('username')"
+        file: authentication/views.py
+        line: 26
+      - step: 2
+        description: "Interpolated into f-string query"
+        code: "query = f\"SELECT * FROM auth_user WHERE username = '{username}'\""
+        file: authentication/views.py
+        line: 28
+      - step: 3
+        description: "Query string passed to cursor.execute"
+        code: "cursor.execute(query)"
+        file: authentication/views.py
+        line: 29
+    sink:
+      type: sql_execution
+      code: "cursor.execute(query)"
+      file: authentication/views.py
+      line: 29
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  - id: FLOW-SQL-002
+    vulnerability_id: VULN-002
+    name: "SQL Injection via Search Parameter"
+    source:
+      type: http_request
+      method: GET
+      parameter: q
+      code: "request.GET.get('q', '')"
+      file: catalog/views.py
+      line: 46
+    propagation:
+      - step: 1
+        description: "Assigned to search_term"
+        code: "search_term = request.GET.get('q', '')"
+        file: catalog/views.py
+        line: 46
+      - step: 2
+        description: "Concatenated into SQL query"
+        code: "query = \"SELECT * FROM products WHERE name LIKE '%\" + search_term + \"%'\""
+        file: catalog/views.py
+        line: 48
+    sink:
+      type: sql_execution
+      code: "cursor.execute(query)"
+      file: catalog/views.py
+      line: 49
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # XSS Flows
+  # ---------------------------------------------------------------------------
+  - id: FLOW-XSS-001
+    vulnerability_id: VULN-003
+    name: "Reflected XSS via Search Display"
+    source:
+      type: http_request
+      method: GET
+      parameter: q
+      code: "request.GET.get('q', '')"
+      file: catalog/views.py
+      line: 46
+    propagation:
+      - step: 1
+        description: "Assigned to search_term"
+        code: "search_term = request.GET.get('q', '')"
+        file: catalog/views.py
+        line: 46
+      - step: 2
+        description: "Embedded in message string"
+        code: "message = f\"Results for: {search_term}\""
+        file: catalog/views.py
+        line: 55
+      - step: 3
+        description: "Passed to mark_safe"
+        code: "context['search_message'] = mark_safe(message)"
+        file: catalog/views.py
+        line: 56
+    sink:
+      type: xss_sink
+      code: "mark_safe(message)"
+      file: catalog/views.py
+      line: 56
+    sanitizers_bypassed:
+      - "Django template auto-escaping (bypassed by mark_safe)"
+    detection_confidence: HIGH
+
+  - id: FLOW-XSS-002
+    vulnerability_id: VULN-004
+    name: "Stored XSS via Review Comment"
+    source:
+      type: http_request
+      method: POST
+      parameter: comment
+      code: "request.POST.get('comment')"
+      file: reviews/views.py
+      line: 32
+    propagation:
+      - step: 1
+        description: "Assigned to comment variable"
+        code: "comment = request.POST.get('comment')"
+        file: reviews/views.py
+        line: 32
+      - step: 2
+        description: "Stored in database"
+        code: "Review.objects.create(product=product, user=request.user, comment=comment)"
+        file: reviews/views.py
+        line: 35
+      - step: 3
+        description: "Retrieved from database in template view"
+        code: "reviews = product.reviews.all()"
+        file: catalog/views.py
+        line: 25
+      - step: 4
+        description: "Rendered with mark_safe in template"
+        code: "{{ review.comment|safe }}"
+        file: templates/catalog/product_detail.html
+        line: 45
+    sink:
+      type: xss_sink
+      code: "{{ review.comment|safe }}"
+      file: templates/catalog/product_detail.html
+      line: 45
+    sanitizers_bypassed:
+      - "Django template auto-escaping (bypassed by |safe filter)"
+    detection_confidence: MEDIUM
+
+  # ---------------------------------------------------------------------------
+  # Command Injection Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-CMD-001
+    vulnerability_id: VULN-005
+    name: "Command Injection via Hostname"
+    source:
+      type: http_request
+      method: POST
+      parameter: hostname
+      code: "request.POST.get('hostname')"
+      file: admin_panel/views.py
+      line: 52
+    propagation:
+      - step: 1
+        description: "Assigned to hostname variable"
+        code: "hostname = request.POST.get('hostname')"
+        file: admin_panel/views.py
+        line: 52
+      - step: 2
+        description: "Interpolated into command string"
+        code: "command = f'ping -c 1 {hostname}'"
+        file: admin_panel/views.py
+        line: 54
+    sink:
+      type: command_execution
+      code: "os.system(command)"
+      file: admin_panel/views.py
+      line: 55
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Path Traversal Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-PATH-001
+    vulnerability_id: VULN-006
+    name: "Path Traversal via Log Filename"
+    source:
+      type: http_request
+      method: GET
+      parameter: file
+      code: "request.GET.get('file')"
+      file: admin_panel/views.py
+      line: 76
+    propagation:
+      - step: 1
+        description: "Assigned to filename"
+        code: "filename = request.GET.get('file')"
+        file: admin_panel/views.py
+        line: 76
+      - step: 2
+        description: "Joined with base directory (not secure)"
+        code: "file_path = os.path.join(LOG_DIR, filename)"
+        file: admin_panel/views.py
+        line: 78
+    sink:
+      type: file_read
+      code: "open(file_path, 'r')"
+      file: admin_panel/views.py
+      line: 80
+    sanitizers_bypassed:
+      - "os.path.join does not prevent ../ traversal"
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # SSRF Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-SSRF-001
+    vulnerability_id: VULN-009
+    name: "SSRF via Webhook URL"
+    source:
+      type: http_request
+      method: POST
+      parameter: url
+      code: "request.POST.get('url')"
+      file: webhooks/views.py
+      line: 27
+    propagation:
+      - step: 1
+        description: "Assigned to url variable"
+        code: "url = request.POST.get('url')"
+        file: webhooks/views.py
+        line: 27
+    sink:
+      type: http_request
+      code: "requests.get(url)"
+      file: webhooks/views.py
+      line: 30
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Deserialization Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-DESER-001
+    vulnerability_id: VULN-010
+    name: "Insecure Deserialization via Cart Cookie"
+    source:
+      type: cookie
+      parameter: cart
+      code: "request.COOKIES.get('cart')"
+      file: cart/views.py
+      line: 42
+    propagation:
+      - step: 1
+        description: "Cookie value retrieved"
+        code: "cart_data = request.COOKIES.get('cart')"
+        file: cart/views.py
+        line: 42
+      - step: 2
+        description: "Base64 decoded"
+        code: "decoded = base64.b64decode(cart_data)"
+        file: cart/views.py
+        line: 44
+    sink:
+      type: deserialization
+      code: "pickle.loads(decoded)"
+      file: cart/views.py
+      line: 45
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # SSTI Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-SSTI-001
+    vulnerability_id: VULN-011
+    name: "Template Injection via Email Preview"
+    source:
+      type: http_request
+      method: POST
+      parameter: template
+      code: "request.POST.get('template')"
+      file: notifications/views.py
+      line: 32
+    propagation:
+      - step: 1
+        description: "Assigned to template_string"
+        code: "template_string = request.POST.get('template')"
+        file: notifications/views.py
+        line: 32
+      - step: 2
+        description: "Used to create Template object"
+        code: "template = Template(template_string)"
+        file: notifications/views.py
+        line: 35
+    sink:
+      type: template_execution
+      code: "template.render(Context(context))"
+      file: notifications/views.py
+      line: 36
+    sanitizers_bypassed: []
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # XXE Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-XXE-001
+    vulnerability_id: VULN-015
+    name: "XXE via XML Import"
+    source:
+      type: http_body
+      content_type: application/xml
+      code: "request.body"
+      file: api/views.py
+      line: 37
+    propagation:
+      - step: 1
+        description: "Request body read"
+        code: "xml_data = request.body"
+        file: api/views.py
+        line: 37
+    sink:
+      type: xml_parse
+      code: "etree.fromstring(xml_data)"
+      file: api/views.py
+      line: 40
+    sanitizers_bypassed:
+      - "Default lxml parser allows external entities"
+    detection_confidence: HIGH
+
+  # ---------------------------------------------------------------------------
+  # Sensitive Logging Flow
+  # ---------------------------------------------------------------------------
+  - id: FLOW-LOG-001
+    vulnerability_id: VULN-014
+    name: "Sensitive Data Logging via Middleware"
+    source:
+      type: http_request
+      method: POST
+      parameter: "*"
+      code: "request.POST"
+      file: middleware/logging.py
+      line: 22
+    propagation:
+      - step: 1
+        description: "Entire POST dict accessed"
+        code: "post_data = dict(request.POST)"
+        file: middleware/logging.py
+        line: 22
+    sink:
+      type: logging
+      code: "logging.info(f'Request data: {post_data}')"
+      file: middleware/logging.py
+      line: 25
+    sanitizers_bypassed: []
+    detection_confidence: MEDIUM
+
+# ==============================================================================
+# Flow Categories for Analysis
+# ==============================================================================
+
+categories:
+  direct_flows:
+    description: "Single-step source to sink"
+    flows: [FLOW-SSRF-001, FLOW-DESER-001]
+
+  multi_step_flows:
+    description: "Multiple propagation steps"
+    flows: [FLOW-SQL-001, FLOW-SQL-002, FLOW-XSS-001, FLOW-CMD-001, FLOW-PATH-001, FLOW-SSTI-001, FLOW-XXE-001]
+
+  stored_flows:
+    description: "Data persisted and retrieved later"
+    flows: [FLOW-XSS-002]
+
+  cross_file_flows:
+    description: "Taint crosses file boundaries"
+    flows: [FLOW-XSS-002]
+
+# ==============================================================================
+# Expected Tool Performance by Flow Complexity
+# ==============================================================================
+
+complexity_analysis:
+  simple_direct:
+    flows: [FLOW-SSRF-001, FLOW-DESER-001]
+    expected_detection: "All tools should detect"
+    pysa: HIGH
+    codeql: HIGH
+    semgrep: HIGH
+
+  standard_multi_step:
+    flows: [FLOW-SQL-001, FLOW-SQL-002, FLOW-XSS-001, FLOW-CMD-001, FLOW-PATH-001]
+    expected_detection: "All tools should detect"
+    pysa: HIGH
+    codeql: HIGH
+    semgrep: HIGH
+
+  complex_stored:
+    flows: [FLOW-XSS-002]
+    expected_detection: "Deep analysis tools only"
+    pysa: MEDIUM
+    codeql: HIGH
+    semgrep: LOW
+
+  template_analysis:
+    flows: [FLOW-SSTI-001]
+    expected_detection: "Requires template understanding"
+    pysa: HIGH
+    codeql: HIGH
+    semgrep: MEDIUM

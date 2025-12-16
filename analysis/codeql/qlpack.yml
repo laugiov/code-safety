@@ -1,0 +1,30 @@
+# CodeQL Pack Definition for VulnShop Security Queries
+# Reference: https://docs.github.com/en/code-security/codeql-cli/getting-started-with-the-codeql-cli/customizing-analysis-with-codeql-packs
+
+name: vulnshop-security-queries
+version: 1.0.0
+description: Custom security queries for detecting vulnerabilities in the VulnShop Django application
+
+# Dependencies on standard CodeQL packs
+libraryPathDependencies:
+  - codeql/python-all
+
+# Target language
+extractor: python
+
+# Default suite to run
+defaultSuiteFile: suites/vulnshop-security.qls
+
+# License information
+license: MIT
+
+# Author information
+authors:
+  - Taint Analysis Masterclass
+
+# Additional metadata
+groups:
+  - python
+  - security
+  - django
+  - web

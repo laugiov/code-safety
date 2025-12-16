@@ -1,0 +1,51 @@
+# CodeQL Configuration for VulnShop Security Analysis
+# This configuration customizes CodeQL analysis for the VulnShop application
+# Reference: https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
+
+name: "VulnShop Security Analysis"
+
+# Disable default queries to use only our custom security suite
+disable-default-queries: false
+
+# Query suites and packs to use
+queries:
+  # Standard security queries
+  - uses: security-extended
+  - uses: security-and-quality
+
+  # Our custom queries for VulnShop
+  - uses: ./queries
+
+# Additional query filters
+query-filters:
+  # Only include security-related queries
+  - include:
+      tags contain: security
+
+  # Include all OWASP-related queries
+  - include:
+      tags contain: owasp
+
+  # Include CWE-tagged queries
+  - include:
+      tags contain: external/cwe
+
+# Paths to exclude from analysis
+paths-ignore:
+  - '**/migrations/**'
+  - '**/tests/**'
+  - '**/__pycache__/**'
+  - '**/venv/**'
+  - '**/node_modules/**'
+  - '**/.git/**'
+  - '**/fixtures/**'
+  - '**/static/**'
+
+# Database creation settings
+database:
+  # Python-specific settings
+  python:
+    # Extract documentation strings
+    extract-docstrings: true
+    # Include type annotations
+    extract-annotations: true

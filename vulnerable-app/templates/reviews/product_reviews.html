@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Reviews for {{ product.name }} - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'catalog:product_list' %}">Products</a></li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'catalog:product_detail' slug=product.slug %}">{{ product.name }}</a>
+                </li>
+                <li class="breadcrumb-item active">Reviews</li>
+            </ol>
+        </nav>
+
+        <h2>Reviews for {{ product.name }}</h2>
+
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V04:</strong> Reviews contain Stored XSS vulnerabilities.
+            Malicious HTML/JavaScript in reviews will execute for all visitors.
+        </div>
+
+        {% if user.is_authenticated %}
+        <a href="{% url 'reviews:add_review' product_id=product.id %}" class="btn btn-primary mb-4">
+            Write a Review
+        </a>
+        {% endif %}
+
+        {% if reviews %}
+        {% for review in reviews %}
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ review.user.username }}</strong>
+                    {% if review.is_verified_purchase %}
+                    <span class="badge bg-success ms-2">Verified Purchase</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <span class="text-warning">{{ review.stars }}</span>
+                    <small class="text-muted ms-2">{{ review.created_at|date:"M d, Y" }}</small>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if review.title_html %}
+                <h5 class="card-title">{{ review.title_html }}</h5>
+                {% endif %}
+                <!-- VULNERABLE: Rendering unsanitized HTML -->
+                <p class="card-text">{{ review.comment_html }}</p>
+
+                <div class="d-flex align-items-center">
+                    <small class="text-muted me-3">Was this review helpful?</small>
+                    <button class="btn btn-sm btn-outline-success me-1" onclick="voteReview({{ review.id }}, true)">
+                        Yes ({{ review.helpful_votes }})
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="voteReview({{ review.id }}, false)">
+                        No
+                    </button>
+                </div>
+            </div>
+            {% if review.user == request.user %}
+            <div class="card-footer">
+                <a href="{% url 'reviews:edit_review' review_id=review.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <a href="{% url 'reviews:delete_review' review_id=review.id %}" class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Delete this review?');">Delete</a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="alert alert-info">
+            No reviews yet. Be the first to review this product!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function voteReview(reviewId, isHelpful) {
+    fetch('/reviews/vote/' + reviewId + '/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: 'helpful=' + isHelpful
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

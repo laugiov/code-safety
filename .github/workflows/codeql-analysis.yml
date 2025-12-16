@@ -1,0 +1,79 @@
+# =============================================================================
+# CodeQL Analysis Workflow
+# =============================================================================
+# Runs GitHub's CodeQL semantic analysis on the VulnShop application.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/codeql/**'
+      - '.github/workflows/codeql-analysis.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/codeql/**'
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sunday at 01:00 UTC
+    - cron: '0 1 * * 0'
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['python']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config-file: analysis/codeql/codeql-config.yml
+          queries: |
+            security-extended
+            security-and-quality
+            +analysis/codeql/queries
+
+      # Autobuild attempts to build any compiled languages
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          output: analysis/codeql/results
+          upload: true
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-results
+          path: |
+            analysis/codeql/results/
+          retention-days: 30
+
+      - name: Generate summary
+        run: |
+          echo "## CodeQL Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "CodeQL analysis completed for Python." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed results in the [Security tab](../security/code-scanning)." >> $GITHUB_STEP_SUMMARY

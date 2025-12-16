@@ -1,0 +1,190 @@
+# Insecure Deserialization Detection Rules
+# Detects unsafe deserialization of untrusted data
+#
+# CWE-502: Deserialization of Untrusted Data
+# OWASP A08:2021 - Software and Data Integrity Failures
+
+rules:
+  # ==============================================================================
+  # pickle.loads() with User Input
+  # ==============================================================================
+  - id: pickle-loads-user-input
+    message: >-
+      Insecure Deserialization: pickle.loads() with user-controlled data can lead
+      to Remote Code Execution (RCE). The pickle module can execute arbitrary code
+      during deserialization.
+
+      Vulnerable: pickle.loads(user_data)
+      Safe: Use JSON or other safe serialization formats
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      technology:
+        - python
+      confidence: HIGH
+      likelihood: HIGH
+      impact: CRITICAL
+      references:
+        - https://docs.python.org/3/library/pickle.html
+        - https://blog.nelhage.com/2011/03/exploiting-pickle/
+    patterns:
+      - pattern-either:
+          - pattern: pickle.loads($USER_INPUT)
+          - pattern: pickle.load($USER_INPUT)
+          - pattern: _pickle.loads($USER_INPUT)
+          - pattern: cPickle.loads($USER_INPUT)
+          - pattern: |
+              $DATA = request.COOKIES.get(...)
+              ...
+              pickle.loads($DATA)
+          - pattern: |
+              $DATA = request.COOKIES.get(...)
+              ...
+              pickle.loads(base64.b64decode($DATA))
+          - pattern: |
+              $DATA = request.$METHOD.get(...)
+              ...
+              pickle.loads($DATA)
+
+  # ==============================================================================
+  # yaml.load() without SafeLoader
+  # ==============================================================================
+  - id: yaml-unsafe-load
+    message: >-
+      Insecure Deserialization: yaml.load() without SafeLoader can execute arbitrary
+      Python code. Use yaml.safe_load() instead.
+
+      Vulnerable: yaml.load(user_data)
+      Safe: yaml.safe_load(user_data)
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: yaml.load($DATA)
+          - pattern: yaml.load($DATA, Loader=yaml.Loader)
+          - pattern: yaml.load($DATA, Loader=yaml.UnsafeLoader)
+          - pattern: yaml.load($DATA, Loader=yaml.FullLoader)
+          - pattern: yaml.unsafe_load($DATA)
+          - pattern: yaml.full_load($DATA)
+    fix: yaml.safe_load($DATA)
+
+  # ==============================================================================
+  # marshal.loads()
+  # ==============================================================================
+  - id: marshal-loads-user-input
+    message: >-
+      Insecure Deserialization: marshal.loads() with untrusted data is dangerous.
+      Like pickle, marshal can execute code during deserialization.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: marshal.loads($USER_INPUT)
+          - pattern: marshal.load($USER_INPUT)
+
+  # ==============================================================================
+  # shelve.open() with User Path
+  # ==============================================================================
+  - id: shelve-user-input
+    message: >-
+      Insecure Deserialization: shelve uses pickle internally.
+      Opening a shelve file with untrusted data can lead to code execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: shelve.open($USER_INPUT)
+          - pattern: shelve.open($USER_INPUT, ...)
+
+  # ==============================================================================
+  # jsonpickle.decode()
+  # ==============================================================================
+  - id: jsonpickle-decode
+    message: >-
+      Insecure Deserialization: jsonpickle.decode() can execute arbitrary code
+      when deserializing untrusted data, similar to pickle.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: jsonpickle.decode($USER_INPUT)
+          - pattern: jsonpickle.decode($USER_INPUT, ...)
+
+  # ==============================================================================
+  # dill.loads() (pickle extension)
+  # ==============================================================================
+  - id: dill-loads-user-input
+    message: >-
+      Insecure Deserialization: dill.loads() is an extension of pickle and
+      inherits its code execution vulnerability.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: dill.loads($USER_INPUT)
+          - pattern: dill.load($USER_INPUT)
+
+  # ==============================================================================
+  # Request/Cookie Data to Deserialization (Full Taint Flow)
+  # ==============================================================================
+  - id: python-request-to-deserialization
+    message: >-
+      Insecure Deserialization: HTTP request data flows to deserialization function.
+      This can lead to Remote Code Execution.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-502"
+      owasp: "A08:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.COOKIES.get(...)
+      - pattern: request.COOKIES[...]
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.data.get(...)
+      - pattern: request.body
+    pattern-sinks:
+      - pattern: pickle.loads($DATA)
+        focus-metavariable: $DATA
+      - pattern: pickle.load($DATA)
+        focus-metavariable: $DATA
+      - pattern: yaml.load($DATA, ...)
+        focus-metavariable: $DATA
+      - pattern: marshal.loads($DATA)
+        focus-metavariable: $DATA
+      - pattern: jsonpickle.decode($DATA, ...)
+        focus-metavariable: $DATA
+    pattern-sanitizers:
+      - pattern: json.loads(...)  # JSON is safe
+      - pattern: yaml.safe_load(...)  # safe_load is safe

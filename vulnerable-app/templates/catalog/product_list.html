@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Products - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Sidebar -->
+        <div class="card mb-4">
+            <div class="card-header">
+                Categories
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                    <a href="{% url 'catalog:product_list' %}">All Products</a>
+                </li>
+                {% for category in categories %}
+                <li class="list-group-item">
+                    <a href="{% url 'catalog:category_detail' slug=category.slug %}">{{ category.name }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Search -->
+        <div class="card">
+            <div class="card-header">
+                Search
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'catalog:search' %}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" placeholder="Search...">
+                        <button type="submit" class="btn btn-outline-primary">Go</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <h2>Products</h2>
+
+        {% if products %}
+        <div class="row">
+            {% for product in products %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}"
+                         style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center"
+                         style="height: 200px;">
+                        <span class="text-white">No Image</span>
+                    </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted small">{{ product.description|truncatewords:15 }}</p>
+                        <p class="card-text">
+                            {% if product.is_on_sale %}
+                            <span class="text-decoration-line-through text-muted">${{ product.price }}</span>
+                            <strong class="text-danger">${{ product.sale_price }}</strong>
+                            {% else %}
+                            <strong class="text-primary">${{ product.price }}</strong>
+                            {% endif %}
+                        </p>
+                        {% if product.stock > 0 %}
+                        <span class="badge bg-success">In Stock</span>
+                        {% else %}
+                        <span class="badge bg-danger">Out of Stock</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'catalog:product_detail' slug=product.slug %}"
+                           class="btn btn-outline-primary btn-sm">View Details</a>
+                        <button class="btn btn-primary btn-sm add-to-cart" data-product-id="{{ product.id }}">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No products available at this time.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

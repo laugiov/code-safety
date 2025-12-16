@@ -1,0 +1,192 @@
+# Django HTTP Request Sources
+# These define where untrusted user data enters the application
+# Reference: https://pyre-check.org/docs/pysa-basics/
+
+# ==============================================================================
+# HTTP Request Object Sources
+# ==============================================================================
+
+# GET parameters - query string data
+def django.http.request.HttpRequest.GET.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+def django.http.request.QueryDict.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+def django.http.request.QueryDict.getlist(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+def django.http.request.QueryDict.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+# POST parameters - form data
+def django.http.request.HttpRequest.POST.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+# Cookies - session and authentication data
+def django.http.request.HttpRequest.COOKIES.__getitem__(
+    self,
+    key
+) -> TaintSource[Cookies]: ...
+
+def django.http.request.HttpRequest.COOKIES.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[Cookies]: ...
+
+# META - headers and server variables
+def django.http.request.HttpRequest.META.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+def django.http.request.HttpRequest.META.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+# FILES - uploaded files
+def django.http.request.HttpRequest.FILES.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+def django.http.request.HttpRequest.FILES.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+# Request body - raw request data
+django.http.request.HttpRequest.body: TaintSource[UserControlled] = ...
+
+# Content type header
+django.http.request.HttpRequest.content_type: TaintSource[UserControlled] = ...
+
+# Path information
+django.http.request.HttpRequest.path: TaintSource[URL] = ...
+django.http.request.HttpRequest.path_info: TaintSource[URL] = ...
+django.http.request.HttpRequest.get_full_path: TaintSource[URL] = ...
+
+# ==============================================================================
+# HTTP Headers
+# ==============================================================================
+
+def django.http.request.HttpRequest.headers.__getitem__(
+    self,
+    key
+) -> TaintSource[Headers]: ...
+
+def django.http.request.HttpRequest.headers.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[Headers]: ...
+
+# ==============================================================================
+# Django REST Framework Sources
+# ==============================================================================
+
+# DRF Request.data - parsed request body
+def rest_framework.request.Request.data.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+def rest_framework.request.Request.data.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+rest_framework.request.Request.data: TaintSource[UserControlled] = ...
+
+# DRF query parameters
+def rest_framework.request.Request.query_params.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+def rest_framework.request.Request.query_params.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[UserControlled]: ...
+
+# ==============================================================================
+# URL Path Parameters (captured from URL patterns)
+# ==============================================================================
+
+# View function keyword arguments from URL patterns
+# These are captured from URL regex/path patterns
+
+# ==============================================================================
+# Database Sources (for Stored XSS, etc.)
+# ==============================================================================
+
+# Model field access can return tainted data from database
+def django.db.models.Model.__getattribute__(
+    self,
+    name
+) -> TaintSource[Database]: ...
+
+# QuerySet results
+def django.db.models.QuerySet.__iter__(
+    self
+) -> TaintSource[Database]: ...
+
+def django.db.models.QuerySet.first(
+    self
+) -> TaintSource[Database]: ...
+
+def django.db.models.QuerySet.last(
+    self
+) -> TaintSource[Database]: ...
+
+# ==============================================================================
+# File System Sources
+# ==============================================================================
+
+def builtins.open(
+    file,
+    mode = ...
+) -> TaintSource[FileSystem]: ...
+
+def io.open(
+    file,
+    mode = ...
+) -> TaintSource[FileSystem]: ...
+
+# ==============================================================================
+# Environment Sources
+# ==============================================================================
+
+def os.environ.__getitem__(
+    self,
+    key
+) -> TaintSource[Environment]: ...
+
+def os.environ.get(
+    self,
+    key,
+    default = None
+) -> TaintSource[Environment]: ...
+
+def os.getenv(
+    key,
+    default = None
+) -> TaintSource[Environment]: ...

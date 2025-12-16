@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Template Editor - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V11:</strong> This editor is vulnerable to Server-Side Template Injection (SSTI).<br>
+            Django template code will be executed on the server.
+        </div>
+
+        <h2>Email Template Editor</h2>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        Edit Template
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="templateForm">
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Template Name</label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                       value="custom_notification">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="content" class="form-label">Template Content</label>
+                                <textarea class="form-control font-monospace" id="content" name="content" rows="15">Dear {{ "{{ name }}" }},
+
+Thank you for shopping with VulnShop!
+
+Order ID: {{ "{{ order_id }}" }}
+Total: {{ "{{ total }}" }}
+
+Your order will be shipped soon.
+
+Best regards,
+The VulnShop Team</textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Preview Template</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        Available Variables
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled font-monospace small">
+                            <li><code>{{ "{{ name }}" }}</code> - Recipient name</li>
+                            <li><code>{{ "{{ email }}" }}</code> - Email address</li>
+                            <li><code>{{ "{{ order_id }}" }}</code> - Order ID</li>
+                            <li><code>{{ "{{ total }}" }}</code> - Order total</li>
+                            <li><code>{{ "{{ user }}" }}</code> - Current user</li>
+                            <li class="text-danger"><code>{{ "{{ settings }}" }}</code> - Django settings</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        SSTI Payloads
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled font-monospace small">
+                            <li><code>{{ "{{ settings.SECRET_KEY }}" }}</code></li>
+                            <li><code>{{ "{{ settings.DATABASES }}" }}</code></li>
+                            <li><code>{{ "{{ settings.AWS_SECRET_ACCESS_KEY }}" }}</code></li>
+                            <li><code>{{ "{{ user.password }}" }}</code></li>
+                            <li><code>{{ "{{ request.META }}" }}</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="previewResult" class="mt-4" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    Preview Result
+                </div>
+                <div class="card-body">
+                    <pre id="previewContent"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    fetch('{% url "notifications:editor" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('previewResult').style.display = 'block';
+            document.getElementById('previewContent').textContent = data.preview;
+        } else {
+            alert('Error: ' + data.error);
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,159 @@
+# Server-Side Request Forgery (SSRF) Detection Rules
+# Detects SSRF patterns where user input controls HTTP request URLs
+#
+# CWE-918: Server-Side Request Forgery
+# OWASP A10:2021 - Server-Side Request Forgery
+
+rules:
+  # ==============================================================================
+  # requests Library SSRF
+  # ==============================================================================
+  - id: ssrf-requests-user-input
+    message: >-
+      Server-Side Request Forgery (SSRF) vulnerability: User-controlled URL passed
+      to requests library. Attackers can make the server access internal services,
+      cloud metadata endpoints, or other restricted resources.
+
+      Vulnerable: requests.get(user_url)
+      Safe: Validate URL against allowlist of permitted domains
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021"
+      category: security
+      technology:
+        - python
+        - requests
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      references:
+        - https://owasp.org/www-community/attacks/Server_Side_Request_Forgery
+        - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+    patterns:
+      - pattern-either:
+          # Direct user input to requests
+          - pattern: requests.get($USER_INPUT, ...)
+          - pattern: requests.post($USER_INPUT, ...)
+          - pattern: requests.put($USER_INPUT, ...)
+          - pattern: requests.delete($USER_INPUT, ...)
+          - pattern: requests.patch($USER_INPUT, ...)
+          - pattern: requests.head($USER_INPUT, ...)
+          - pattern: requests.options($USER_INPUT, ...)
+          - pattern: requests.request($METHOD, $USER_INPUT, ...)
+          # Variable then request
+          - pattern: |
+              $URL = request.$METHOD.get(...)
+              ...
+              requests.get($URL, ...)
+          - pattern: |
+              $URL = request.$METHOD.get(...)
+              ...
+              requests.post($URL, ...)
+
+  # ==============================================================================
+  # urllib SSRF
+  # ==============================================================================
+  - id: ssrf-urllib-user-input
+    message: >-
+      SSRF vulnerability: User-controlled URL passed to urllib.
+      Validate URLs against an allowlist before making requests.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: urllib.request.urlopen($USER_INPUT)
+          - pattern: urllib.request.urlopen($USER_INPUT, ...)
+          - pattern: |
+              $URL = request.$METHOD.get(...)
+              ...
+              urllib.request.urlopen($URL)
+          - pattern: urllib.request.Request($USER_INPUT, ...)
+
+  # ==============================================================================
+  # httpx SSRF (Async HTTP Client)
+  # ==============================================================================
+  - id: ssrf-httpx-user-input
+    message: >-
+      SSRF vulnerability: User-controlled URL passed to httpx client.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: httpx.get($USER_INPUT, ...)
+          - pattern: httpx.post($USER_INPUT, ...)
+          - pattern: httpx.AsyncClient().get($USER_INPUT, ...)
+          - pattern: |
+              $URL = request.$METHOD.get(...)
+              ...
+              httpx.get($URL, ...)
+
+  # ==============================================================================
+  # aiohttp SSRF (Async)
+  # ==============================================================================
+  - id: ssrf-aiohttp-user-input
+    message: >-
+      SSRF vulnerability: User-controlled URL in aiohttp request.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: $SESSION.get($USER_INPUT, ...)
+          - pattern: $SESSION.post($USER_INPUT, ...)
+          - pattern: aiohttp.ClientSession().get($USER_INPUT)
+
+  # ==============================================================================
+  # Request Data to HTTP Client (Full Taint Flow)
+  # ==============================================================================
+  - id: python-request-to-ssrf
+    message: >-
+      SSRF: HTTP request data flows to outbound HTTP request URL.
+      Implement URL validation with domain allowlisting.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-918"
+      owasp: "A10:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+      - pattern: request.data.get(...)
+      - pattern: request.data[...]
+      - pattern: request.form.get(...)
+      - pattern: request.args.get(...)
+    pattern-sinks:
+      - pattern: requests.get($URL, ...)
+        focus-metavariable: $URL
+      - pattern: requests.post($URL, ...)
+        focus-metavariable: $URL
+      - pattern: requests.request($METHOD, $URL, ...)
+        focus-metavariable: $URL
+      - pattern: urllib.request.urlopen($URL, ...)
+        focus-metavariable: $URL
+      - pattern: httpx.get($URL, ...)
+        focus-metavariable: $URL
+    pattern-sanitizers:
+      - pattern: validate_url(...)
+      - pattern: is_allowed_url(...)
+      - pattern: urlparse(...)  # Only partial - needs additional validation

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}File Manager - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V06:</strong> This page is vulnerable to Path Traversal.<br>
+            Try downloading: <code>../../../etc/passwd</code> or <code>../vulnshop/settings.py</code>
+        </div>
+
+        <h2>File Manager</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Download File
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'admin_panel:download_file' %}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="filename"
+                               placeholder="Enter filename to download">
+                        <button type="submit" class="btn btn-primary">Download</button>
+                    </div>
+                    <small class="text-muted">Download a file from the uploads directory</small>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                View File
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'admin_panel:view_file' %}" id="viewForm">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="filename"
+                               placeholder="Enter filename to view">
+                        <button type="submit" class="btn btn-secondary">View</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Path Traversal Payloads</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled font-monospace small">
+                    <li><code>../../../etc/passwd</code> - Read passwd file</li>
+                    <li><code>../../../etc/shadow</code> - Read shadow (if permissions allow)</li>
+                    <li><code>../vulnshop/settings.py</code> - Read Django settings</li>
+                    <li><code>....//....//....//etc/passwd</code> - Bypass simple filters</li>
+                    <li><code>..%2f..%2f..%2fetc/passwd</code> - URL encoded</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Payment Method - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V12 Related:</strong> This form stores credit card data in plain text, including CVV.
+            This is a serious security vulnerability.
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Add Payment Method</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="nickname" class="form-label">Card Nickname (optional)</label>
+                        <input type="text" class="form-control" id="nickname" name="nickname"
+                               placeholder="e.g., Personal Card">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="card_holder" class="form-label">Cardholder Name</label>
+                        <input type="text" class="form-control" id="card_holder" name="card_holder"
+                               placeholder="Name as it appears on card" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="card_number" class="form-label">Card Number</label>
+                        <input type="text" class="form-control" id="card_number" name="card_number"
+                               placeholder="1234 5678 9012 3456" maxlength="19" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="expiry_month" class="form-label">Expiry Month</label>
+                            <select class="form-select" id="expiry_month" name="expiry_month" required>
+                                <option value="">MM</option>
+                                {% for i in "01 02 03 04 05 06 07 08 09 10 11 12".split %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="expiry_year" class="form-label">Expiry Year</label>
+                            <select class="form-select" id="expiry_year" name="expiry_year" required>
+                                <option value="">YYYY</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
+                                <option value="2029">2029</option>
+                                <option value="2030">2030</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="cvv" class="form-label">CVV</label>
+                            <input type="text" class="form-control" id="cvv" name="cvv"
+                                   placeholder="123" maxlength="4" required>
+                            <small class="text-danger">Should never be stored!</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'payment:payment_methods' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Card</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

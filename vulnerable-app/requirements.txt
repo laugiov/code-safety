@@ -1,0 +1,117 @@
+# =============================================================================
+# VulnShop Requirements
+# =============================================================================
+# WARNING: This file contains intentionally vulnerable dependencies
+# for security testing purposes. DO NOT use in production.
+#
+# VULNERABILITY V13: Vulnerable and Outdated Components (CWE-1035)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Framework - VULNERABLE VERSIONS
+# -----------------------------------------------------------------------------
+# Django 3.0.0 has multiple CVEs:
+# - CVE-2021-44420 (Potential bypass of access control)
+# - CVE-2021-45115 (Denial of Service via UserAttributeSimilarityValidator)
+# - CVE-2021-45116 (Information disclosure via dictsort filter)
+# - CVE-2021-45452 (Directory traversal via Storage.save())
+Django==3.0.0
+
+# Django REST Framework
+djangorestframework==3.14.0
+
+# -----------------------------------------------------------------------------
+# Database & ORM
+# -----------------------------------------------------------------------------
+# For PostgreSQL support (optional)
+psycopg2-binary>=2.9.0
+
+# -----------------------------------------------------------------------------
+# Image Processing - VULNERABLE
+# -----------------------------------------------------------------------------
+# Pillow 8.0.0 has multiple CVEs:
+# - CVE-2021-25287 (Out-of-bounds Read)
+# - CVE-2021-25288 (Out-of-bounds Read)
+# - CVE-2021-25290 (Denial of Service)
+# - CVE-2021-28675 (Denial of Service)
+Pillow==8.0.0
+
+# -----------------------------------------------------------------------------
+# YAML Processing - VULNERABLE
+# -----------------------------------------------------------------------------
+# PyYAML 5.3 has:
+# - CVE-2020-14343 (Arbitrary Code Execution via yaml.load())
+PyYAML==5.3
+
+# -----------------------------------------------------------------------------
+# HTTP Library - VULNERABLE
+# -----------------------------------------------------------------------------
+# requests 2.20.0 has:
+# - CVE-2018-18074 (Session fixation attack)
+requests==2.20.0
+
+# urllib3 1.24.1 has:
+# - CVE-2019-11324 (Improper Certificate Validation)
+# - CVE-2019-11236 (CRLF Injection)
+urllib3==1.24.1
+
+# -----------------------------------------------------------------------------
+# Template Engine - VULNERABLE
+# -----------------------------------------------------------------------------
+# Jinja2 2.10 has:
+# - CVE-2019-10906 (Sandbox Escape)
+Jinja2==2.10
+
+# -----------------------------------------------------------------------------
+# Cryptography - VULNERABLE
+# -----------------------------------------------------------------------------
+# cryptography 2.3 has multiple vulnerabilities:
+# - CVE-2018-10903 (Bleichenbacher Attack)
+# - Multiple other fixes in later versions
+cryptography==2.3
+
+# -----------------------------------------------------------------------------
+# XML Processing - VULNERABLE
+# -----------------------------------------------------------------------------
+# lxml 4.4.0 has:
+# - CVE-2020-27783 (XSS via clean function)
+# - CVE-2021-28957 (XSS via HTML5 parser)
+lxml==4.4.0
+
+# defusedxml is safe, but we're not using it properly
+defusedxml>=0.7.0
+
+# -----------------------------------------------------------------------------
+# SSH/Remote - VULNERABLE
+# -----------------------------------------------------------------------------
+# paramiko 2.4.0 has:
+# - CVE-2018-1000805 (Authentication Bypass)
+paramiko==2.4.0
+
+# -----------------------------------------------------------------------------
+# Other Utilities
+# -----------------------------------------------------------------------------
+# python-dateutil for date handling
+python-dateutil>=2.8.0
+
+# For better HTTP client (used in webhooks)
+httpx>=0.24.0
+
+# -----------------------------------------------------------------------------
+# Development & Testing (comment out in production)
+# -----------------------------------------------------------------------------
+# pytest>=7.0.0
+# pytest-django>=4.5.0
+# coverage>=7.0.0
+
+# =============================================================================
+# Secure Alternatives (for reference - NOT installed):
+# =============================================================================
+# Django>=4.2.0      # Latest secure version
+# Pillow>=10.0.0     # Fixed image processing vulnerabilities
+# PyYAML>=6.0.0      # Use yaml.safe_load() only
+# requests>=2.31.0   # Latest with security fixes
+# cryptography>=41.0  # Latest with security fixes
+# lxml>=4.9.0        # Fixed XSS vulnerabilities
+# paramiko>=3.0.0    # Fixed authentication bypass
+# =============================================================================

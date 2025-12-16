@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V07:</strong> This page is vulnerable to IDOR. Try accessing other users' profiles by changing the user_id parameter.<br>
+            Example: <code>?user_id=1</code>
+        </div>
+
+        <h2>User Profile: {{ profile_user.username }}</h2>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Personal Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Username:</strong> {{ profile_user.username }}</p>
+                        <p><strong>Email:</strong> {{ profile_user.email }}</p>
+                        <p><strong>Name:</strong> {{ profile_user.first_name }} {{ profile_user.last_name }}</p>
+                        <p><strong>Phone:</strong> {{ profile_user.phone|default:"Not set" }}</p>
+                        <p><strong>Member since:</strong> {{ profile_user.date_joined|date:"M d, Y" }}</p>
+
+                        {% if request.user == profile_user %}
+                        <a href="{% url 'profile:update_profile' %}" class="btn btn-primary">Edit Profile</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <!-- VULNERABLE: Exposing payment methods via IDOR -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Payment Methods</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for method in payment_methods %}
+                        <p>
+                            <i class="bi bi-credit-card"></i>
+                            {{ method.masked_number }} ({{ method.expiry }})
+                        </p>
+                        {% empty %}
+                        <p class="text-muted">No payment methods saved.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Recent Orders</h5>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.order_number }}</td>
+                            <td>{{ order.created_at|date:"M d, Y" }}</td>
+                            <td>${{ order.total }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ order.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No orders yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

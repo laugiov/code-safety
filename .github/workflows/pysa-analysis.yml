@@ -1,0 +1,144 @@
+# =============================================================================
+# Pysa Analysis Workflow
+# =============================================================================
+# Runs Meta's Pysa taint analysis on the VulnShop application.
+
+name: Pysa Analysis
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/pysa/**'
+      - '.github/workflows/pysa-analysis.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'vulnerable-app/**'
+      - 'analysis/pysa/**'
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  pysa:
+    name: Pysa Taint Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-pysa-${{ hashFiles('vulnerable-app/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-pysa-
+
+      - name: Cache Pyre
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pyre
+            .pyre
+          key: ${{ runner.os }}-pyre-${{ hashFiles('analysis/pysa/.pyre_configuration') }}
+          restore-keys: |
+            ${{ runner.os }}-pyre-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyre-check
+          pip install -r vulnerable-app/requirements.txt || true
+
+      - name: Run Pysa analysis
+        id: pysa
+        working-directory: analysis/pysa
+        run: |
+          echo "Running Pysa taint analysis..."
+          pyre analyze \
+            --save-results-to results/pysa_results.json \
+            --no-verify \
+            2>&1 | tee results/pysa_output.log || true
+
+          # Check if results were generated
+          if [ -f results/pysa_results.json ]; then
+            echo "results_generated=true" >> $GITHUB_OUTPUT
+            ISSUE_COUNT=$(python -c "import json; data=json.load(open('results/pysa_results.json')); print(len(data.get('errors', [])))" 2>/dev/null || echo "0")
+            echo "issue_count=$ISSUE_COUNT" >> $GITHUB_OUTPUT
+          else
+            echo "results_generated=false" >> $GITHUB_OUTPUT
+            echo "issue_count=0" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Convert to SARIF
+        if: steps.pysa.outputs.results_generated == 'true'
+        working-directory: analysis/pysa
+        run: |
+          python scripts/convert_to_sarif.py \
+            --input results/pysa_results.json \
+            --output results/pysa_results.sarif \
+            || echo "SARIF conversion skipped"
+
+      - name: Upload SARIF to GitHub Security
+        if: steps.pysa.outputs.results_generated == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: analysis/pysa/results/pysa_results.sarif
+          category: pysa
+        continue-on-error: true
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pysa-results
+          path: |
+            analysis/pysa/results/
+          retention-days: 30
+
+      - name: Generate summary
+        run: |
+          echo "## Pysa Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Issues Found | ${{ steps.pysa.outputs.issue_count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Results Generated | ${{ steps.pysa.outputs.results_generated }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See the Security tab for detailed findings." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.pysa.outputs.results_generated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueCount = '${{ steps.pysa.outputs.issue_count }}';
+            const body = `## Pysa Analysis Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Issues Found | ${issueCount} |
+
+            View detailed results in the [Security tab](../security/code-scanning).
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+        continue-on-error: true

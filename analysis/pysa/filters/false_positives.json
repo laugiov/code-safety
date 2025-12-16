@@ -1,0 +1,41 @@
+{
+  "comment": "False positive suppressions for Pysa taint analysis",
+  "version": "1.0.0",
+  "suppressions": [
+    {
+      "code": 5001,
+      "path_pattern": ".*migrations.*",
+      "reason": "Django migrations use raw SQL but are auto-generated and trusted"
+    },
+    {
+      "code": 5006,
+      "path_pattern": ".*admin\\.py$",
+      "reason": "Django admin views have CSRF protection and staff-only access"
+    },
+    {
+      "code": 5008,
+      "function_pattern": ".*_debug_.*",
+      "reason": "Debug logging is intentional in development builds"
+    }
+  ],
+  "known_safe_patterns": [
+    {
+      "description": "Parameterized queries are safe",
+      "pattern": "cursor.execute(.*,.*params.*)"
+    },
+    {
+      "description": "Django ORM filter/get/exclude are safe",
+      "pattern": "\\.objects\\.(filter|get|exclude)\\("
+    },
+    {
+      "description": "Validated integer IDs",
+      "pattern": "int\\(request\\."
+    }
+  ],
+  "baseline_date": "2025-01-01",
+  "notes": [
+    "This file contains known false positives for the VulnShop application.",
+    "Suppressions should be reviewed periodically as the codebase evolves.",
+    "Use the --diff-against-baseline flag to see only new findings."
+  ]
+}

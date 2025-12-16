@@ -1,0 +1,241 @@
+# Django Sanitizers and Safe Functions
+# These define functions that neutralize tainted data
+# Reference: https://pyre-check.org/docs/pysa-basics/
+
+# ==============================================================================
+# XSS Sanitizers
+# ==============================================================================
+
+# Django's HTML escaping functions
+@Sanitize[XSS]
+def django.utils.html.escape(text): ...
+
+@Sanitize[XSS]
+def django.utils.html.strip_tags(value): ...
+
+@Sanitize[XSS]
+def django.utils.html.escapejs(value): ...
+
+@Sanitize[XSS]
+def django.utils.html.conditional_escape(text): ...
+
+# Django template filters
+@Sanitize[XSS]
+def django.template.defaultfilters.escape(value): ...
+
+@Sanitize[XSS]
+def django.template.defaultfilters.force_escape(value): ...
+
+@Sanitize[XSS]
+def django.template.defaultfilters.striptags(value): ...
+
+# Third-party sanitizer: bleach
+@Sanitize[XSS]
+def bleach.clean(
+    text,
+    tags = None,
+    attributes = None,
+    protocols = None,
+    strip = False,
+    strip_comments = True
+): ...
+
+@Sanitize[XSS]
+def bleach.linkify(
+    text,
+    callbacks = None,
+    skip_tags = None,
+    parse_email = False
+): ...
+
+# html module
+@Sanitize[XSS]
+def html.escape(
+    s,
+    quote = True
+): ...
+
+# ==============================================================================
+# SQL Injection Sanitizers
+# ==============================================================================
+
+# Parameterized queries are safe - QuerySet methods
+@Sanitize[SQL]
+def django.db.models.QuerySet.filter(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.get(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.exclude(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.create(self, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.update(self, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.values(self, *fields, **expressions): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.values_list(self, *fields, flat = False, named = False): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.annotate(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.QuerySet.aggregate(self, *args, **kwargs): ...
+
+# Manager methods that use ORM
+@Sanitize[SQL]
+def django.db.models.Manager.filter(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.Manager.get(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.Manager.exclude(self, *args, **kwargs): ...
+
+@Sanitize[SQL]
+def django.db.models.Manager.create(self, **kwargs): ...
+
+# ==============================================================================
+# Path Traversal Sanitizers
+# ==============================================================================
+
+@Sanitize[FileSystem]
+def os.path.basename(path): ...
+
+@Sanitize[FileSystem]
+def os.path.normpath(path): ...
+
+@Sanitize[FileSystem]
+def pathlib.Path.name.__get__(self): ...
+
+@Sanitize[FileSystem]
+def pathlib.PurePath.name.__get__(self): ...
+
+# Django's get_valid_filename
+@Sanitize[FileSystem]
+def django.utils.text.get_valid_filename(name): ...
+
+# Secure filename from werkzeug (if used)
+@Sanitize[FileSystem]
+def werkzeug.utils.secure_filename(filename): ...
+
+# ==============================================================================
+# SSRF Sanitizers
+# ==============================================================================
+
+# URL validation functions
+@Sanitize[SSRF]
+def django.core.validators.URLValidator.__call__(self, value): ...
+
+# Custom URL validation would go here
+# These are project-specific sanitizers that should be added:
+# @Sanitize[SSRF]
+# def myproject.utils.validate_webhook_url(url): ...
+
+# ==============================================================================
+# Command Injection Sanitizers
+# ==============================================================================
+
+# shlex.quote escapes shell arguments
+@Sanitize[CommandExecution]
+def shlex.quote(s): ...
+
+# pipes.quote (deprecated, alias for shlex.quote)
+@Sanitize[CommandExecution]
+def pipes.quote(s): ...
+
+# ==============================================================================
+# Deserialization Sanitizers
+# ==============================================================================
+
+# JSON is safe for deserialization
+@Sanitize[Deserialization]
+def json.loads(s, **kwargs): ...
+
+@Sanitize[Deserialization]
+def json.load(fp, **kwargs): ...
+
+# yaml safe_load is secure
+@Sanitize[Deserialization]
+def yaml.safe_load(stream): ...
+
+@Sanitize[Deserialization]
+def yaml.safe_load_all(stream): ...
+
+# ==============================================================================
+# XML Sanitizers (using defusedxml)
+# ==============================================================================
+
+@Sanitize[XMLParser]
+def defusedxml.ElementTree.fromstring(text, forbid_dtd = False, forbid_entities = True, forbid_external = True): ...
+
+@Sanitize[XMLParser]
+def defusedxml.ElementTree.parse(source, forbid_dtd = False, forbid_entities = True, forbid_external = True): ...
+
+@Sanitize[XMLParser]
+def defusedxml.minidom.parseString(string, forbid_dtd = False, forbid_entities = True, forbid_external = True): ...
+
+@Sanitize[XMLParser]
+def defusedxml.minidom.parse(file, forbid_dtd = False, forbid_entities = True, forbid_external = True): ...
+
+@Sanitize[XMLParser]
+def defusedxml.lxml.fromstring(text): ...
+
+@Sanitize[XMLParser]
+def defusedxml.lxml.parse(source): ...
+
+# ==============================================================================
+# Input Validation Sanitizers
+# ==============================================================================
+
+# Django validators
+@Sanitize[UserControlled]
+def django.core.validators.validate_email(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.validate_slug(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.validate_unicode_slug(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.validate_ipv4_address(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.validate_ipv6_address(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.validate_ipv46_address(value): ...
+
+@Sanitize[UserControlled]
+def django.core.validators.int_list_validator(sep = ",")(value): ...
+
+# Type casting can sanitize some attacks
+@Sanitize[SQL, CommandExecution]
+def builtins.int(x, base = 10): ...
+
+@Sanitize[SQL, CommandExecution]
+def builtins.float(x): ...
+
+@Sanitize[SQL]
+def builtins.bool(x): ...
+
+# UUID validation
+@Sanitize[SQL, UserControlled]
+def uuid.UUID(hex = None, bytes = None, bytes_le = None, fields = None, int = None, version = None): ...
+
+# ==============================================================================
+# Encoding/Decoding (Propagation, not Sanitization)
+# ==============================================================================
+
+# Note: These propagate taint but don't sanitize
+# base64 encoding/decoding propagates taint
+
+# URL encoding/decoding propagates taint
+# urllib.parse.quote propagates taint
+# urllib.parse.unquote propagates taint

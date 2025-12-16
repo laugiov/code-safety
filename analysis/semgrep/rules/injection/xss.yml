@@ -1,0 +1,185 @@
+# Cross-Site Scripting (XSS) Detection Rules for Semgrep
+# Detects XSS patterns in Django applications
+#
+# CWE-79: Improper Neutralization of Input During Web Page Generation
+# OWASP A03:2021 - Injection
+
+rules:
+  # ==============================================================================
+  # mark_safe() with User Input (Reflected XSS)
+  # ==============================================================================
+  - id: django-xss-mark-safe
+    message: >-
+      Cross-Site Scripting (XSS) vulnerability: User input passed to mark_safe()
+      bypasses Django's auto-escaping and will be rendered as raw HTML.
+
+      Vulnerable: mark_safe(user_input)
+      Safe: escape(user_input) or use Django template auto-escaping
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - django
+      confidence: HIGH
+      likelihood: HIGH
+      impact: MEDIUM
+      references:
+        - https://docs.djangoproject.com/en/4.2/ref/utils/#django.utils.safestring.mark_safe
+        - https://owasp.org/www-community/attacks/xss/
+    patterns:
+      - pattern-either:
+          - pattern: mark_safe($USER_INPUT)
+          - pattern: mark_safe(f"...{$USER_INPUT}...")
+          - pattern: mark_safe("..." + $USER_INPUT + "...")
+          - pattern: |
+              from django.utils.safestring import mark_safe
+              ...
+              mark_safe($USER_INPUT)
+
+  # ==============================================================================
+  # format_html() Misuse
+  # ==============================================================================
+  - id: django-xss-format-html-misuse
+    message: >-
+      Potential XSS: format_html() format string contains user input.
+      The format string itself should be a static string, with user input
+      only in the format arguments (which are auto-escaped).
+
+      Vulnerable: format_html(user_input)
+      Safe: format_html("<b>{}</b>", user_input)
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: format_html($USER_INPUT)
+          - pattern: format_html(f"...{$USER_INPUT}...", ...)
+          - pattern: format_html("..." + $USER_INPUT + "...", ...)
+
+  # ==============================================================================
+  # HttpResponse with HTML Content Type
+  # ==============================================================================
+  - id: django-xss-httpresponse
+    message: >-
+      Potential XSS: User input rendered in HttpResponse without escaping.
+      HttpResponse does not auto-escape content. Use escape() or render templates.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: HttpResponse(f"...{$USER_INPUT}...")
+          - pattern: HttpResponse("..." + $USER_INPUT + "...")
+          - pattern: |
+              $CONTENT = f"...{$USER_INPUT}..."
+              ...
+              HttpResponse($CONTENT)
+
+  # ==============================================================================
+  # Request Data to XSS Sink (Full Taint Flow)
+  # ==============================================================================
+  - id: django-request-to-xss
+    message: >-
+      XSS vulnerability: HTTP request data flows to HTML output without escaping.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+    pattern-sinks:
+      - pattern: mark_safe($INPUT)
+        focus-metavariable: $INPUT
+      - pattern: format_html($INPUT, ...)
+        focus-metavariable: $INPUT
+    pattern-sanitizers:
+      - pattern: escape(...)
+      - pattern: strip_tags(...)
+      - pattern: bleach.clean(...)
+
+  # ==============================================================================
+  # Stored XSS - Database to mark_safe
+  # ==============================================================================
+  - id: django-stored-xss
+    message: >-
+      Potential Stored XSS: Data retrieved from database rendered with mark_safe().
+      Database content may contain malicious scripts stored by attackers.
+      Sanitize content before marking as safe.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-79"
+      owasp: "A03:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $DATA = $MODEL.objects.$METHOD(...)
+              ...
+              mark_safe($DATA.$FIELD)
+          - pattern: |
+              $OBJ = $MODEL.objects.get(...)
+              ...
+              $OBJ.$FIELD = mark_safe($OBJ.$FIELD)
+          - pattern: mark_safe($OBJ.comment)
+          - pattern: mark_safe($OBJ.content)
+          - pattern: mark_safe($OBJ.body)
+          - pattern: mark_safe($OBJ.description)
+          - pattern: mark_safe($OBJ.html)
+
+  # ==============================================================================
+  # Template |safe Filter Warning
+  # ==============================================================================
+  - id: django-template-safe-filter
+    message: >-
+      XSS risk: The |safe filter bypasses Django's auto-escaping.
+      Ensure the variable contains trusted, sanitized content.
+    severity: WARNING
+    languages: [generic]
+    paths:
+      include:
+        - "**/*.html"
+    metadata:
+      cwe: "CWE-79"
+      category: security
+      confidence: LOW
+    patterns:
+      - pattern: "{{ $VAR|safe }}"
+      - pattern: "{{ $VAR |safe }}"
+
+  # ==============================================================================
+  # autoescape off Block
+  # ==============================================================================
+  - id: django-template-autoescape-off
+    message: >-
+      XSS risk: autoescape is disabled in this template block.
+      All variables in this block will be rendered without escaping.
+    severity: WARNING
+    languages: [generic]
+    paths:
+      include:
+        - "**/*.html"
+    metadata:
+      cwe: "CWE-79"
+      category: security
+      confidence: MEDIUM
+    pattern: "{% autoescape off %}"

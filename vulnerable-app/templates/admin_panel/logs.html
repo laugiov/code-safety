@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Logs - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V05:</strong> Log file parameter is vulnerable to Command Injection.<br>
+            Try: <code>access.log; cat /etc/passwd</code>
+        </div>
+
+        <h2>Server Logs</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                View Log File
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="log" class="form-label">Log File</label>
+                        <input type="text" class="form-control" id="log" name="log"
+                               value="{{ log_file }}" placeholder="e.g., access.log, error.log">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="lines" class="form-label">Lines</label>
+                        <input type="number" class="form-control" id="lines" name="lines"
+                               value="100" min="10" max="1000">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">View Logs</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Common Log Files
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <a href="?log=access.log&lines=100">access.log</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="?log=error.log&lines=100">error.log</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="?log=nginx/access.log&lines=100">nginx/access.log</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <a href="?log=nginx/error.log&lines=100">nginx/error.log</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="?log=auth.log&lines=100">auth.log</a>
+                            </li>
+                            <li class="list-group-item">
+                                <a href="?log=syslog&lines=100">syslog</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if output %}
+        <div class="card">
+            <div class="card-header">
+                Log Output: {{ log_file }}
+            </div>
+            <div class="card-body">
+                <pre class="terminal-output" style="max-height: 500px; overflow-y: auto;">{{ output }}</pre>
+            </div>
+        </div>
+        {% endif %}
+
+        <a href="{% url 'admin_panel:dashboard' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Settings - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Notification Settings</h2>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        Email Templates
+                    </div>
+                    <div class="card-body">
+                        <p>Create and preview custom email templates.</p>
+                        <a href="{% url 'notifications:preview' %}" class="btn btn-primary">
+                            Template Preview
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-danger">
+                    <div class="card-header bg-danger text-white">
+                        Template Editor (V11)
+                    </div>
+                    <div class="card-body">
+                        <p>Edit email templates with Django template syntax.</p>
+                        <div class="alert alert-warning small">
+                            <strong>Warning:</strong> Vulnerable to SSTI
+                        </div>
+                        <a href="{% url 'notifications:editor' %}" class="btn btn-danger">
+                            Open Editor
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                Send Test Notification
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'notifications:test' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="recipient" class="form-label">Recipient Email</label>
+                        <input type="email" class="form-control" id="recipient" name="recipient"
+                               value="{{ user.email }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="subject" name="subject"
+                               value="Test Notification">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="template" class="form-label">Template Content</label>
+                        <textarea class="form-control font-monospace" id="template" name="template" rows="5">Hello {{ "{{ name }}" }},
+
+This is a test notification from VulnShop.
+
+Best regards,
+VulnShop Team</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Send Test</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

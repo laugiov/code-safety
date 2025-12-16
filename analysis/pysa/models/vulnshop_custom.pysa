@@ -1,0 +1,262 @@
+# VulnShop Application-Specific Taint Models
+# Custom models for the VulnShop vulnerable Django application
+# These complement the generic Django models with app-specific configurations
+
+# ==============================================================================
+# Authentication Module (V01: SQL Injection, V16: Brute Force)
+# ==============================================================================
+
+# The login view receives user-controlled credentials
+def authentication.views.login_view(
+    request: TaintSource[UserControlled]
+): ...
+
+def authentication.views.register_view(
+    request: TaintSource[UserControlled]
+): ...
+
+def authentication.views.password_reset_view(
+    request: TaintSource[UserControlled]
+): ...
+
+# User model - password field should never be logged
+authentication.models.User.password: TaintSource[UserControlled] = ...
+
+# ==============================================================================
+# Catalog Module (V02: SQL Injection, V03: Reflected XSS)
+# ==============================================================================
+
+def catalog.views.search_products(
+    request: TaintSource[UserControlled]
+): ...
+
+def catalog.views.product_list(
+    request: TaintSource[UserControlled]
+): ...
+
+def catalog.views.product_detail(
+    request: TaintSource[UserControlled],
+    product_id
+): ...
+
+# ==============================================================================
+# Reviews Module (V04: Stored XSS)
+# ==============================================================================
+
+def reviews.views.add_review(
+    request: TaintSource[UserControlled],
+    product_id
+): ...
+
+def reviews.views.edit_review(
+    request: TaintSource[UserControlled],
+    review_id
+): ...
+
+# Review content from database is tainted (stored XSS vector)
+reviews.models.Review.comment: TaintSource[Database] = ...
+reviews.models.Review.title: TaintSource[Database] = ...
+
+# ==============================================================================
+# Admin Panel Module (V05: Command Injection, V06: Path Traversal)
+# ==============================================================================
+
+def admin_panel.views.system_info(
+    request: TaintSource[UserControlled]
+): ...
+
+def admin_panel.views.run_diagnostics(
+    request: TaintSource[UserControlled]
+): ...
+
+def admin_panel.views.view_logs(
+    request: TaintSource[UserControlled]
+): ...
+
+def admin_panel.views.file_manager(
+    request: TaintSource[UserControlled]
+): ...
+
+def admin_panel.views.download_file(
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# Profile Module (V07: IDOR, V08: Mass Assignment)
+# ==============================================================================
+
+def profile.views.view_profile(
+    request: TaintSource[UserControlled],
+    user_id
+): ...
+
+def profile.views.edit_profile(
+    request: TaintSource[UserControlled]
+): ...
+
+def profile.views.update_settings(
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# Webhooks Module (V09: SSRF)
+# ==============================================================================
+
+def webhooks.views.test_webhook(
+    request: TaintSource[UserControlled]
+): ...
+
+def webhooks.views.configure_webhook(
+    request: TaintSource[UserControlled]
+): ...
+
+def webhooks.views.preview_url(
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# Cart Module (V10: Insecure Deserialization)
+# ==============================================================================
+
+def cart.views.view_cart(
+    request: TaintSource[UserControlled, Cookies]
+): ...
+
+def cart.views.add_to_cart(
+    request: TaintSource[UserControlled]
+): ...
+
+def cart.views.restore_cart(
+    request: TaintSource[UserControlled, Cookies]
+): ...
+
+def cart.views.import_cart(
+    request: TaintSource[UserControlled]
+): ...
+
+# Cart cookie contains serialized data
+# This is the source for insecure deserialization
+
+# ==============================================================================
+# Notifications Module (V11: SSTI)
+# ==============================================================================
+
+def notifications.views.preview_template(
+    request: TaintSource[UserControlled]
+): ...
+
+def notifications.views.template_editor(
+    request: TaintSource[UserControlled]
+): ...
+
+def notifications.views.send_notification(
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# API Module (V15: XXE)
+# ==============================================================================
+
+def api.views.import_products(
+    request: TaintSource[UserControlled]
+): ...
+
+def api.views.import_orders(
+    request: TaintSource[UserControlled]
+): ...
+
+def api.views.xml_endpoint(
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# Middleware Module (V14: Sensitive Data Logging)
+# ==============================================================================
+
+# The logging middleware receives all request data
+def middleware.logging.RequestLoggingMiddleware.__call__(
+    self,
+    request: TaintSource[UserControlled]
+): ...
+
+def middleware.logging.RequestLoggingMiddleware.process_request(
+    self,
+    request: TaintSource[UserControlled]
+): ...
+
+# ==============================================================================
+# Payment Module (No direct vulnerabilities, but handles sensitive data)
+# ==============================================================================
+
+def payment.views.process_payment(
+    request: TaintSource[UserControlled]
+): ...
+
+def payment.views.checkout(
+    request: TaintSource[UserControlled]
+): ...
+
+# Payment data should be treated as sensitive
+payment.models.PaymentMethod.card_number: TaintSource[UserControlled] = ...
+payment.models.PaymentMethod.cvv: TaintSource[UserControlled] = ...
+
+# ==============================================================================
+# Settings Module (V12: Hardcoded Secrets)
+# Note: Hardcoded secrets are detected by pattern matching, not taint analysis
+# ==============================================================================
+
+# Django settings that should not be exposed
+vulnshop.settings.SECRET_KEY: TaintSource[Environment] = ...
+vulnshop.settings.DATABASES: TaintSource[Environment] = ...
+
+# ==============================================================================
+# Feature Propagation Rules
+# ==============================================================================
+
+# String formatting propagates taint with feature
+def str.__mod__(
+    self,
+    args: TaintInTaintOut[Via[via_format_string]]
+): ...
+
+def str.format(
+    self,
+    *args: TaintInTaintOut[Via[via_format_string]],
+    **kwargs: TaintInTaintOut[Via[via_format_string]]
+): ...
+
+# Concatenation propagates taint with feature
+def str.__add__(
+    self,
+    other: TaintInTaintOut[Via[via_concatenation]]
+): ...
+
+# Base64 encoding/decoding propagates taint
+def base64.b64encode(
+    s: TaintInTaintOut[Via[via_base64]]
+): ...
+
+def base64.b64decode(
+    s: TaintInTaintOut[Via[via_base64]]
+): ...
+
+# JSON operations propagate taint
+def json.dumps(
+    obj: TaintInTaintOut[Via[via_json]]
+): ...
+
+def json.loads(
+    s: TaintInTaintOut[Via[via_json]]
+): ...
+
+# Dictionary access propagates taint
+def dict.__getitem__(
+    self,
+    key: TaintInTaintOut[Via[via_dict_access]]
+): ...
+
+def dict.get(
+    self,
+    key,
+    default = None
+) -> TaintInTaintOut[Via[via_dict_access]]: ...

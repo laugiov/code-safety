@@ -1,0 +1,119 @@
+# =============================================================================
+# Benchmark Workflow
+# =============================================================================
+# Runs comparative benchmarks across all three analysis tools.
+
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      tools:
+        description: 'Tools to benchmark (comma-separated: pysa,codeql,semgrep or all)'
+        required: false
+        default: 'all'
+  schedule:
+    # Run weekly on Sunday at 03:00 UTC
+    - cron: '0 3 * * 0'
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ===========================================================================
+  # Run Benchmarks
+  # ===========================================================================
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-benchmark-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-benchmark-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyre-check
+          pip install -r vulnerable-app/requirements.txt || true
+          pip install -r requirements-dev.txt || true
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Pysa benchmark
+        if: contains(github.event.inputs.tools, 'pysa') || github.event.inputs.tools == 'all' || github.event_name == 'schedule'
+        working-directory: analysis/pysa
+        run: |
+          echo "Running Pysa..."
+          START_TIME=$(date +%s)
+          pyre analyze --save-results-to results/pysa_results.json --no-verify 2>&1 || true
+          END_TIME=$(date +%s)
+          echo "PYSA_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Run Semgrep benchmark
+        if: contains(github.event.inputs.tools, 'semgrep') || github.event.inputs.tools == 'all' || github.event_name == 'schedule'
+        run: |
+          echo "Running Semgrep..."
+          START_TIME=$(date +%s)
+          semgrep scan \
+            --config analysis/semgrep/rules/ \
+            --config "p/python" \
+            --config "p/django" \
+            --json \
+            --output analysis/semgrep/results/semgrep_results.json \
+            vulnerable-app/ 2>&1 || true
+          END_TIME=$(date +%s)
+          echo "SEMGREP_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Calculate metrics
+        run: |
+          python benchmarks/scripts/calculate_metrics.py \
+            --ground-truth benchmarks/ground-truth/vulnerabilities.json \
+            --pysa-results analysis/pysa/results/pysa_results.json \
+            --semgrep-results analysis/semgrep/results/semgrep_results.json \
+            --output benchmarks/results/comparison.json \
+            2>&1 || echo "Metrics calculation completed with warnings"
+
+      - name: Generate report
+        run: |
+          python benchmarks/scripts/generate_report.py \
+            --input benchmarks/results/comparison.json \
+            --output benchmarks/reports/benchmark_report.md \
+            2>&1 || echo "Report generation completed with warnings"
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmarks/results/
+            benchmarks/reports/
+          retention-days: 90
+
+      - name: Generate summary
+        run: |
+          echo "## Benchmark Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Execution Times" >> $GITHUB_STEP_SUMMARY
+          echo "| Tool | Time (seconds) |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Pysa | ${PYSA_TIME:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep | ${SEMGREP_TIME:-N/A} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See artifacts for detailed results." >> $GITHUB_STEP_SUMMARY

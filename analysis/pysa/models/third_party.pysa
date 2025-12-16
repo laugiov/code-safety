@@ -1,0 +1,320 @@
+# Third-Party Library Taint Models
+# Models for common Python libraries used in web applications
+# Reference: https://pyre-check.org/docs/pysa-basics/
+
+# ==============================================================================
+# Requests Library - HTTP Client
+# ==============================================================================
+
+# Response object can contain untrusted data
+requests.Response.text: TaintSource[UserControlled] = ...
+requests.Response.content: TaintSource[UserControlled] = ...
+
+def requests.Response.json(
+    self,
+    **kwargs
+) -> TaintSource[UserControlled]: ...
+
+def requests.Response.iter_content(
+    self,
+    chunk_size = 1,
+    decode_unicode = False
+) -> TaintSource[UserControlled]: ...
+
+def requests.Response.iter_lines(
+    self,
+    chunk_size = 512,
+    decode_unicode = False,
+    delimiter = None
+) -> TaintSource[UserControlled]: ...
+
+# ==============================================================================
+# PIL/Pillow - Image Processing
+# ==============================================================================
+
+# Image metadata can be tainted
+def PIL.Image.open(
+    fp: TaintSink[FileSystem],
+    mode = "r",
+    formats = None
+): ...
+
+def PIL.Image.Image.save(
+    self,
+    fp: TaintSink[FileSystem],
+    format = None,
+    **params
+): ...
+
+# EXIF data is user-controlled
+def PIL.ExifTags.TAGS.__getitem__(
+    self,
+    key
+) -> TaintSource[UserControlled]: ...
+
+# ==============================================================================
+# Celery - Task Queue
+# ==============================================================================
+
+# Celery task arguments can be tainted
+def celery.app.task.Task.apply_async(
+    self,
+    args: TaintSink[Deserialization] = None,
+    kwargs: TaintSink[Deserialization] = None,
+    task_id = None,
+    producer = None,
+    link = None,
+    link_error = None,
+    shadow = None,
+    **options
+): ...
+
+def celery.app.task.Task.delay(
+    self,
+    *args: TaintSink[Deserialization],
+    **kwargs: TaintSink[Deserialization]
+): ...
+
+# ==============================================================================
+# Redis - Cache/Message Broker
+# ==============================================================================
+
+# Redis can store and retrieve tainted data
+def redis.Redis.get(
+    self,
+    name
+) -> TaintSource[Database]: ...
+
+def redis.Redis.mget(
+    self,
+    keys,
+    *args
+) -> TaintSource[Database]: ...
+
+def redis.Redis.hget(
+    self,
+    name,
+    key
+) -> TaintSource[Database]: ...
+
+def redis.Redis.hgetall(
+    self,
+    name
+) -> TaintSource[Database]: ...
+
+# ==============================================================================
+# SQLAlchemy - ORM
+# ==============================================================================
+
+# Raw SQL execution
+def sqlalchemy.engine.Engine.execute(
+    self,
+    statement: TaintSink[SQL],
+    *multiparams,
+    **params
+): ...
+
+def sqlalchemy.orm.Session.execute(
+    self,
+    statement: TaintSink[SQL],
+    params = None,
+    execution_options = None,
+    bind_arguments = None
+): ...
+
+def sqlalchemy.text(
+    text: TaintSink[SQL],
+    bind = None
+): ...
+
+# ==============================================================================
+# Jinja2 - Template Engine
+# ==============================================================================
+
+# Template creation from string
+def jinja2.Template.__init__(
+    self,
+    source: TaintSink[TemplateInjection, RemoteCodeExecution],
+    block_start_string = None,
+    block_end_string = None,
+    variable_start_string = None,
+    variable_end_string = None,
+    comment_start_string = None,
+    comment_end_string = None,
+    line_statement_prefix = None,
+    line_comment_prefix = None,
+    trim_blocks = False,
+    lstrip_blocks = False,
+    newline_sequence = None,
+    keep_trailing_newline = False,
+    extensions = (),
+    optimized = True,
+    undefined = None,
+    finalize = None,
+    autoescape = False,
+    enable_async = False
+): ...
+
+def jinja2.Environment.from_string(
+    self,
+    source: TaintSink[TemplateInjection],
+    globals = None,
+    template_class = None
+): ...
+
+# ==============================================================================
+# Paramiko - SSH Client
+# ==============================================================================
+
+def paramiko.SSHClient.connect(
+    self,
+    hostname: TaintSink[SSRF],
+    port = 22,
+    username = None,
+    password = None,
+    pkey = None,
+    key_filename = None,
+    timeout = None,
+    allow_agent = True,
+    look_for_keys = True,
+    compress = False,
+    sock = None,
+    gss_auth = False,
+    gss_kex = False,
+    gss_deleg_creds = True,
+    gss_host = None,
+    banner_timeout = None,
+    auth_timeout = None,
+    gss_trust_dns = True,
+    passphrase = None,
+    disabled_algorithms = None
+): ...
+
+def paramiko.SSHClient.exec_command(
+    self,
+    command: TaintSink[CommandExecution],
+    bufsize = -1,
+    timeout = None,
+    get_pty = False,
+    environment = None
+): ...
+
+# ==============================================================================
+# Boto3 - AWS SDK
+# ==============================================================================
+
+# S3 operations
+def boto3.client.S3.download_file(
+    self,
+    Bucket,
+    Key,
+    Filename: TaintSink[FileSystem],
+    ExtraArgs = None,
+    Callback = None,
+    Config = None
+): ...
+
+def boto3.client.S3.upload_file(
+    self,
+    Filename: TaintSink[FileSystem],
+    Bucket,
+    Key,
+    ExtraArgs = None,
+    Callback = None,
+    Config = None
+): ...
+
+def boto3.client.S3.get_object(
+    self,
+    Bucket,
+    Key
+) -> TaintSource[FileSystem]: ...
+
+# Lambda invocation
+def boto3.client.Lambda.invoke(
+    self,
+    FunctionName,
+    InvocationType = None,
+    LogType = None,
+    ClientContext = None,
+    Payload: TaintSink[Deserialization] = None,
+    Qualifier = None
+): ...
+
+# ==============================================================================
+# Cryptography Library
+# ==============================================================================
+
+# Password hashing (safe)
+@Sanitize[UserControlled]
+def bcrypt.hashpw(password, salt): ...
+
+@Sanitize[UserControlled]
+def passlib.hash.pbkdf2_sha256.hash(secret, **kwds): ...
+
+@Sanitize[UserControlled]
+def django.contrib.auth.hashers.make_password(password, salt = None, hasher = "default"): ...
+
+# ==============================================================================
+# Markdown/Rich Text Processing
+# ==============================================================================
+
+# Markdown rendering can be XSS vector
+def markdown.markdown(
+    text: TaintSink[XSS],
+    extensions = None,
+    extension_configs = None,
+    output_format = None,
+    tab_length = None
+): ...
+
+def mistune.markdown(
+    text: TaintSink[XSS],
+    escape = True,
+    renderer = None,
+    plugins = None
+): ...
+
+# ==============================================================================
+# PDF Generation
+# ==============================================================================
+
+# ReportLab - PDF library
+def reportlab.lib.pagesizes.letter: ...
+
+def reportlab.pdfgen.canvas.Canvas.drawString(
+    self,
+    x,
+    y,
+    text: TaintSink[XSS]
+): ...
+
+# WeasyPrint - HTML to PDF
+def weasyprint.HTML.__init__(
+    self,
+    string: TaintSink[XSS] = None,
+    url = None,
+    file_obj = None,
+    base_url = None,
+    url_fetcher = None,
+    media_type = "print"
+): ...
+
+# ==============================================================================
+# GraphQL
+# ==============================================================================
+
+# GraphQL query execution
+def graphql.graphql_sync(
+    schema,
+    source: TaintSink[SQL],
+    root_value = None,
+    context_value = None,
+    variable_values = None,
+    operation_name = None,
+    field_resolver = None,
+    type_resolver = None,
+    middleware = None,
+    execution_context_class = None,
+    check_sync = True
+): ...

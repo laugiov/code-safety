@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Search: {{ query }} - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V02 & V03:</strong> This page is vulnerable to SQL Injection and Reflected XSS.<br>
+            <strong>SQL Injection:</strong> Try <code>%' OR '1'='1</code> in search<br>
+            <strong>XSS:</strong> Try <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code> in search
+        </div>
+
+        <!-- VULNERABLE: Using |safe filter on user input (V03) -->
+        <h2>Search results for: {{ query|safe }}</h2>
+
+        <!-- Search Form -->
+        <form method="get" action="{% url 'catalog:search' %}" class="mb-4">
+            <div class="input-group">
+                <input type="text" class="form-control" name="q" value="{{ query }}"
+                       placeholder="Search products...">
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        {% if products %}
+        <div class="row">
+            {% for product in products %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    {% if product.image_url %}
+                    <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted">{{ product.description|truncatewords:20 }}</p>
+                        <p class="card-text">
+                            <strong class="text-primary">${{ product.price }}</strong>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'catalog:product_detail' slug=product.slug %}"
+                           class="btn btn-outline-primary btn-sm">View Details</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            No products found matching your search.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

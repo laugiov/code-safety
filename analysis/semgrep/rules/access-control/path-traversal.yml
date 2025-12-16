@@ -1,0 +1,196 @@
+# Path Traversal Detection Rules
+# Detects directory traversal vulnerabilities
+#
+# CWE-22: Improper Limitation of a Pathname to a Restricted Directory
+# OWASP A01:2021 - Broken Access Control
+
+rules:
+  # ==============================================================================
+  # open() with User Input
+  # ==============================================================================
+  - id: path-traversal-open
+    message: >-
+      Path Traversal vulnerability: User input used in file path without validation.
+      Attackers can use ../ sequences to access files outside the intended directory.
+
+      Vulnerable: open(base_dir + user_input)
+      Safe: Validate path is within allowed directory, use os.path.basename()
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      technology:
+        - python
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      references:
+        - https://owasp.org/www-community/attacks/Path_Traversal
+        - https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+    patterns:
+      - pattern-either:
+          # Direct concatenation
+          - pattern: open($BASE + $USER_INPUT, ...)
+          - pattern: open($BASE + $USER_INPUT)
+          - pattern: open(f"...{$USER_INPUT}...", ...)
+          - pattern: open(f"...{$USER_INPUT}...")
+          # os.path.join (doesn't prevent traversal)
+          - pattern: open(os.path.join($BASE, $USER_INPUT), ...)
+          - pattern: open(os.path.join($BASE, $USER_INPUT))
+          # Variable then open
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              open($PATH + $FILENAME, ...)
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              open(os.path.join($BASE, $FILENAME), ...)
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              open(f"...{$FILENAME}...", ...)
+
+  # ==============================================================================
+  # pathlib.Path with User Input
+  # ==============================================================================
+  - id: path-traversal-pathlib
+    message: >-
+      Path Traversal: User input used with pathlib without validation.
+      The / operator doesn't prevent ../ traversal.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: Path($BASE) / $USER_INPUT
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              Path($BASE) / $FILENAME
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              $PATH.joinpath($FILENAME)
+
+  # ==============================================================================
+  # File Operations with User Input
+  # ==============================================================================
+  - id: path-traversal-file-operations
+    message: >-
+      Path Traversal in file operations: User input controls file path
+      in potentially dangerous operations (delete, copy, move).
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          # os module
+          - pattern: os.remove($PATH + $USER_INPUT)
+          - pattern: os.remove(os.path.join($BASE, $USER_INPUT))
+          - pattern: os.unlink($PATH + $USER_INPUT)
+          - pattern: os.rmdir($PATH + $USER_INPUT)
+          # shutil
+          - pattern: shutil.copy($USER_INPUT, ...)
+          - pattern: shutil.copy(..., $USER_INPUT)
+          - pattern: shutil.move($USER_INPUT, ...)
+          - pattern: shutil.move(..., $USER_INPUT)
+          - pattern: shutil.rmtree($PATH + $USER_INPUT)
+
+  # ==============================================================================
+  # Django FileResponse with User Path
+  # ==============================================================================
+  - id: django-path-traversal-fileresponse
+    message: >-
+      Path Traversal in Django FileResponse: User input controls file path.
+      Validate the path resolves to an allowed directory.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      technology:
+        - django
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: FileResponse(open($BASE + $USER_INPUT, ...))
+          - pattern: FileResponse(open(os.path.join($BASE, $USER_INPUT), ...))
+          - pattern: |
+              $FILENAME = request.$METHOD.get(...)
+              ...
+              FileResponse(open(...$FILENAME..., ...))
+
+  # ==============================================================================
+  # send_file / send_from_directory (Flask)
+  # ==============================================================================
+  - id: flask-path-traversal
+    message: >-
+      Path Traversal in Flask file serving: User input in file path.
+      Use send_from_directory with a fixed directory and validated filename.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      technology:
+        - flask
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: send_file($BASE + $USER_INPUT)
+          - pattern: send_file(f"...{$USER_INPUT}...")
+          - pattern: |
+              $FILENAME = request.args.get(...)
+              ...
+              send_file(...$FILENAME...)
+
+  # ==============================================================================
+  # Request Data to File Path (Full Taint Flow)
+  # ==============================================================================
+  - id: python-request-to-path-traversal
+    message: >-
+      Path Traversal: HTTP request data flows to file path operation.
+      Sanitize input using os.path.basename() or validate against allowed paths.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-22"
+      owasp: "A01:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+      - pattern: request.args.get(...)
+      - pattern: request.form.get(...)
+    pattern-sinks:
+      - pattern: open($PATH, ...)
+        focus-metavariable: $PATH
+      - pattern: os.path.join($BASE, $PATH)
+        focus-metavariable: $PATH
+      - pattern: Path($BASE) / $PATH
+        focus-metavariable: $PATH
+      - pattern: shutil.copy($PATH, ...)
+        focus-metavariable: $PATH
+      - pattern: os.remove($PATH)
+        focus-metavariable: $PATH
+    pattern-sanitizers:
+      - pattern: os.path.basename(...)
+      - pattern: secure_filename(...)
+      - pattern: get_valid_filename(...)

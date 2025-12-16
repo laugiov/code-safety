@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Methods - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Payment Methods</h2>
+
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-warning">
+            <strong>Security Issue:</strong> Payment data is stored in plain text (V12 related).
+            CVV should never be stored.
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Saved Cards</h5>
+                <a href="{% url 'payment:add_payment_method' %}" class="btn btn-primary btn-sm">Add New Card</a>
+            </div>
+            <div class="card-body">
+                {% if payment_methods %}
+                {% for method in payment_methods %}
+                <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+                    <div>
+                        <i class="bi bi-credit-card me-2"></i>
+                        <strong>{{ method.masked_number }}</strong>
+                        <span class="text-muted ms-2">Expires {{ method.expiry }}</span>
+                        {% if method.nickname %}
+                        <span class="badge bg-secondary ms-2">{{ method.nickname }}</span>
+                        {% endif %}
+                        {% if method.is_default %}
+                        <span class="badge bg-primary ms-2">Default</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'payment:delete_payment_method' method_id=method.id %}"
+                           class="btn btn-outline-danger btn-sm"
+                           onclick="return confirm('Are you sure you want to delete this payment method?');">
+                            Delete
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted">No payment methods saved.</p>
+                <a href="{% url 'payment:add_payment_method' %}" class="btn btn-primary">Add Payment Method</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

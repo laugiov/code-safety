@@ -1,0 +1,204 @@
+# SQL Injection Detection Rules for Semgrep
+# Detects various SQL injection patterns in Django applications
+#
+# CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+# OWASP A03:2021 - Injection
+
+rules:
+  # ==============================================================================
+  # Format String SQL Injection
+  # ==============================================================================
+  - id: django-sql-injection-format-string
+    message: >-
+      SQL Injection vulnerability detected. User input from request is being formatted
+      directly into a SQL query string using f-strings. Use parameterized queries instead.
+
+      Vulnerable pattern: cursor.execute(f"SELECT * FROM table WHERE col = '{user_input}'")
+      Safe pattern: cursor.execute("SELECT * FROM table WHERE col = %s", [user_input])
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - django
+        - python
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      references:
+        - https://docs.djangoproject.com/en/4.2/topics/security/#sql-injection-protection
+        - https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html
+    patterns:
+      - pattern-either:
+          # Direct f-string in execute
+          - pattern: |
+              $CURSOR.execute(f"...{$USER_INPUT}...", ...)
+          - pattern: |
+              $CURSOR.execute(f"...{$USER_INPUT}...")
+          - pattern: |
+              $CURSOR.executemany(f"...{$USER_INPUT}...", ...)
+          # Variable with f-string then execute
+          - pattern: |
+              $QUERY = f"...{$USER_INPUT}..."
+              ...
+              $CURSOR.execute($QUERY, ...)
+          - pattern: |
+              $QUERY = f"...{$USER_INPUT}..."
+              ...
+              $CURSOR.execute($QUERY)
+
+  # ==============================================================================
+  # String Concatenation SQL Injection
+  # ==============================================================================
+  - id: django-sql-injection-concatenation
+    message: >-
+      SQL Injection vulnerability: User input is concatenated into SQL query.
+      Use parameterized queries to prevent SQL injection.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $QUERY = "..." + $USER_INPUT + "..."
+              ...
+              $CURSOR.execute($QUERY, ...)
+          - pattern: |
+              $QUERY = "..." + $USER_INPUT + "..."
+              ...
+              $CURSOR.execute($QUERY)
+          - pattern: |
+              $CURSOR.execute("..." + $USER_INPUT + "...", ...)
+          - pattern: |
+              $CURSOR.execute("..." + $USER_INPUT + "...")
+
+  # ==============================================================================
+  # Percent Formatting SQL Injection
+  # ==============================================================================
+  - id: django-sql-injection-percent-format
+    message: >-
+      SQL Injection vulnerability: User input formatted with % operator into SQL query.
+      Use parameterized queries with proper escaping.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $QUERY = "..." % $USER_INPUT
+              ...
+              $CURSOR.execute($QUERY, ...)
+          - pattern: |
+              $QUERY = "..." % ($USER_INPUT,)
+              ...
+              $CURSOR.execute($QUERY)
+          - pattern: |
+              $CURSOR.execute("..." % $USER_INPUT, ...)
+          - pattern: |
+              $CURSOR.execute("..." % ($USER_INPUT,))
+
+  # ==============================================================================
+  # Django ORM Raw Query Injection
+  # ==============================================================================
+  - id: django-raw-sql-injection
+    message: >-
+      SQL Injection in Django raw() query. User-controlled data flows directly to
+      raw SQL query without parameterization.
+
+      Vulnerable: Model.objects.raw(f"SELECT * FROM table WHERE col = '{user_input}'")
+      Safe: Model.objects.raw("SELECT * FROM table WHERE col = %s", [user_input])
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      technology:
+        - django
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $MODEL.objects.raw(f"...{$USER_INPUT}...")
+          - pattern: |
+              $MODEL.objects.raw("..." + $USER_INPUT + "...")
+          - pattern: |
+              $MODEL.objects.raw("..." % $USER_INPUT)
+          - pattern: |
+              $QUERY = f"...{$USER_INPUT}..."
+              ...
+              $MODEL.objects.raw($QUERY)
+          - pattern: |
+              $QUERY = "..." + $USER_INPUT + "..."
+              ...
+              $MODEL.objects.raw($QUERY)
+
+  # ==============================================================================
+  # Django QuerySet.extra() Injection
+  # ==============================================================================
+  - id: django-extra-sql-injection
+    message: >-
+      SQL Injection via QuerySet.extra(). User input in extra() clauses can lead
+      to SQL injection. Consider using Django ORM methods or parameterized queries.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $QUERYSET.extra(where=[f"...{$USER_INPUT}..."])
+          - pattern: |
+              $QUERYSET.extra(where=["..." + $USER_INPUT + "..."])
+          - pattern: |
+              $QUERYSET.extra(select={...: f"...{$USER_INPUT}..."})
+
+  # ==============================================================================
+  # Request Data to SQL (Full Taint Flow)
+  # ==============================================================================
+  - id: django-request-to-sql-injection
+    message: >-
+      SQL Injection: Data from HTTP request flows to SQL execution.
+      Trace the data flow and ensure proper parameterization.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-89"
+      owasp: "A03:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.GET.get(...)
+      - pattern: request.POST.get(...)
+      - pattern: request.GET[...]
+      - pattern: request.POST[...]
+      - pattern: request.data.get(...)
+      - pattern: request.data[...]
+    pattern-sinks:
+      - pattern: $CURSOR.execute($QUERY, ...)
+        focus-metavariable: $QUERY
+      - pattern: $CURSOR.execute($QUERY)
+        focus-metavariable: $QUERY
+      - pattern: $MODEL.objects.raw($QUERY, ...)
+        focus-metavariable: $QUERY
+      - pattern: $MODEL.objects.raw($QUERY)
+        focus-metavariable: $QUERY
+    pattern-sanitizers:
+      - pattern: int(...)
+      - pattern: float(...)
+      - pattern: $MODEL.objects.filter(...)
+      - pattern: $MODEL.objects.get(...)

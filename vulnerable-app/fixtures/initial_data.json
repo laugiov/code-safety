@@ -1,0 +1,171 @@
+[
+  {
+    "model": "catalog.category",
+    "pk": 1,
+    "fields": {
+      "name": "Electronics",
+      "slug": "electronics",
+      "description": "Electronic devices and accessories",
+      "parent": null,
+      "image": ""
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 2,
+    "fields": {
+      "name": "Clothing",
+      "slug": "clothing",
+      "description": "Apparel and fashion items",
+      "parent": null,
+      "image": ""
+    }
+  },
+  {
+    "model": "catalog.category",
+    "pk": 3,
+    "fields": {
+      "name": "Books",
+      "slug": "books",
+      "description": "Books and publications",
+      "parent": null,
+      "image": ""
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 1,
+    "fields": {
+      "name": "Laptop Pro X1",
+      "slug": "laptop-pro-x1",
+      "description": "High-performance laptop with the latest processor and graphics card. Perfect for developers and security researchers.",
+      "price": "1299.99",
+      "sale_price": null,
+      "category": 1,
+      "image_url": "https://via.placeholder.com/400x300?text=Laptop",
+      "stock": 50,
+      "sku": "ELEC-001",
+      "is_active": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 2,
+    "fields": {
+      "name": "Wireless Mouse",
+      "slug": "wireless-mouse",
+      "description": "Ergonomic wireless mouse with long battery life.",
+      "price": "49.99",
+      "sale_price": "39.99",
+      "category": 1,
+      "image_url": "https://via.placeholder.com/400x300?text=Mouse",
+      "stock": 200,
+      "sku": "ELEC-002",
+      "is_active": true,
+      "is_featured": false
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 3,
+    "fields": {
+      "name": "Mechanical Keyboard",
+      "slug": "mechanical-keyboard",
+      "description": "RGB mechanical keyboard with Cherry MX switches.",
+      "price": "149.99",
+      "sale_price": null,
+      "category": 1,
+      "image_url": "https://via.placeholder.com/400x300?text=Keyboard",
+      "stock": 75,
+      "sku": "ELEC-003",
+      "is_active": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 4,
+    "fields": {
+      "name": "Security T-Shirt",
+      "slug": "security-tshirt",
+      "description": "Black t-shirt with 'I found a vulnerability in your code' printed on it.",
+      "price": "24.99",
+      "sale_price": null,
+      "category": 2,
+      "image_url": "https://via.placeholder.com/400x300?text=T-Shirt",
+      "stock": 100,
+      "sku": "CLTH-001",
+      "is_active": true,
+      "is_featured": false
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 5,
+    "fields": {
+      "name": "Hacker Hoodie",
+      "slug": "hacker-hoodie",
+      "description": "Comfortable hoodie with binary code pattern. Perfect for late-night coding sessions.",
+      "price": "59.99",
+      "sale_price": "49.99",
+      "category": 2,
+      "image_url": "https://via.placeholder.com/400x300?text=Hoodie",
+      "stock": 50,
+      "sku": "CLTH-002",
+      "is_active": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 6,
+    "fields": {
+      "name": "Web Application Security Guide",
+      "slug": "web-security-guide",
+      "description": "Comprehensive guide to web application security. Covers OWASP Top 10 and more.",
+      "price": "49.99",
+      "sale_price": null,
+      "category": 3,
+      "image_url": "https://via.placeholder.com/400x300?text=Security+Book",
+      "stock": 30,
+      "sku": "BOOK-001",
+      "is_active": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 7,
+    "fields": {
+      "name": "Python for Hackers",
+      "slug": "python-for-hackers",
+      "description": "Learn Python programming for security research and automation.",
+      "price": "39.99",
+      "sale_price": null,
+      "category": 3,
+      "image_url": "https://via.placeholder.com/400x300?text=Python+Book",
+      "stock": 45,
+      "sku": "BOOK-002",
+      "is_active": true,
+      "is_featured": false
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 8,
+    "fields": {
+      "name": "USB Security Key",
+      "slug": "usb-security-key",
+      "description": "Hardware security key for two-factor authentication.",
+      "price": "29.99",
+      "sale_price": null,
+      "category": 1,
+      "image_url": "https://via.placeholder.com/400x300?text=Security+Key",
+      "stock": 150,
+      "sku": "ELEC-004",
+      "is_active": true,
+      "is_featured": false
+    }
+  }
+]

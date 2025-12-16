@@ -1,0 +1,237 @@
+# Mass Assignment Detection Rules
+# Detects uncontrolled attribute assignment vulnerabilities
+#
+# CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes
+# OWASP A04:2021 - Insecure Design
+
+rules:
+  # ==============================================================================
+  # Django Model Update with Request Data
+  # ==============================================================================
+  - id: django-mass-assignment-update
+    message: >-
+      Mass Assignment vulnerability: Model updated with unfiltered request data.
+      Attackers can modify unintended fields (e.g., is_admin, balance, role).
+
+      Vulnerable: user.__dict__.update(request.POST)
+      Safe: Explicitly assign allowed fields only
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      technology:
+        - django
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: HIGH
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+    patterns:
+      - pattern-either:
+          # __dict__.update with request data
+          - pattern: $OBJ.__dict__.update(request.POST)
+          - pattern: $OBJ.__dict__.update(request.POST.dict())
+          - pattern: $OBJ.__dict__.update(dict(request.POST))
+          - pattern: $OBJ.__dict__.update(request.data)
+          # setattr in loop
+          - pattern: |
+              for $KEY, $VALUE in request.POST.items():
+                ...
+                setattr($OBJ, $KEY, $VALUE)
+          - pattern: |
+              for $KEY, $VALUE in request.data.items():
+                ...
+                setattr($OBJ, $KEY, $VALUE)
+          # vars() update
+          - pattern: vars($OBJ).update(request.POST)
+          - pattern: vars($OBJ).update(request.data)
+
+  # ==============================================================================
+  # Model.objects.create with Request Data
+  # ==============================================================================
+  - id: django-mass-assignment-create
+    message: >-
+      Mass Assignment in object creation: Model created with unfiltered
+      request data dictionary. Use explicit field assignment or a form.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: $MODEL.objects.create(**request.POST)
+          - pattern: $MODEL.objects.create(**request.POST.dict())
+          - pattern: $MODEL.objects.create(**dict(request.POST))
+          - pattern: $MODEL.objects.create(**request.data)
+          - pattern: $MODEL(**request.POST)
+          - pattern: $MODEL(**request.data)
+
+  # ==============================================================================
+  # QuerySet.update with Unfiltered Data
+  # ==============================================================================
+  - id: django-mass-assignment-queryset-update
+    message: >-
+      Mass Assignment in QuerySet update: Bulk update with unfiltered
+      request data. Specify allowed fields explicitly.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: $MODEL.objects.filter(...).update(**request.POST)
+          - pattern: $MODEL.objects.filter(...).update(**request.POST.dict())
+          - pattern: $MODEL.objects.filter(...).update(**request.data)
+          - pattern: $QUERYSET.update(**request.POST)
+          - pattern: $QUERYSET.update(**request.data)
+
+  # ==============================================================================
+  # setattr with User Input
+  # ==============================================================================
+  - id: python-mass-assignment-setattr
+    message: >-
+      Mass Assignment via setattr: User-controlled attribute name passed to setattr.
+      Attackers can modify protected attributes.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $ATTR = request.$METHOD.get(...)
+              ...
+              setattr($OBJ, $ATTR, $VALUE)
+          - pattern: |
+              $ATTR = request.$METHOD[...]
+              ...
+              setattr($OBJ, $ATTR, $VALUE)
+          - pattern: setattr($OBJ, request.POST.get(...), $VALUE)
+          - pattern: setattr($OBJ, request.GET.get(...), $VALUE)
+          - pattern: setattr($OBJ, request.data.get(...), $VALUE)
+
+  # ==============================================================================
+  # DRF Serializer Without Read-Only Fields
+  # ==============================================================================
+  - id: drf-mass-assignment-serializer
+    message: >-
+      Potential Mass Assignment in DRF Serializer: ModelSerializer with
+      fields = '__all__' may expose sensitive fields. Use explicit field lists.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      technology:
+        - django-rest-framework
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              class $SERIALIZER(ModelSerializer):
+                class Meta:
+                  ...
+                  fields = '__all__'
+          - pattern: |
+              class $SERIALIZER(serializers.ModelSerializer):
+                class Meta:
+                  ...
+                  fields = '__all__'
+      # Should have read_only_fields or exclude
+      - pattern-not-inside: |
+          class $SERIALIZER(...):
+            class Meta:
+              ...
+              read_only_fields = [...]
+
+  # ==============================================================================
+  # Django Form Without Explicit Fields
+  # ==============================================================================
+  - id: django-mass-assignment-modelform
+    message: >-
+      Potential Mass Assignment in ModelForm: Using fields = '__all__'
+      may allow modification of unintended fields. Specify fields explicitly.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      technology:
+        - django
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              class $FORM(ModelForm):
+                class Meta:
+                  ...
+                  fields = '__all__'
+          - pattern: |
+              class $FORM(forms.ModelForm):
+                class Meta:
+                  ...
+                  fields = '__all__'
+
+  # ==============================================================================
+  # Direct Dict Unpacking to Model
+  # ==============================================================================
+  - id: python-mass-assignment-dict-unpacking
+    message: >-
+      Mass Assignment via dictionary unpacking: Request data unpacked
+      directly into model/function. Filter or whitelist allowed keys.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $DATA = request.POST.dict()
+              ...
+              $MODEL(**$DATA)
+          - pattern: |
+              $DATA = dict(request.POST)
+              ...
+              $MODEL.objects.create(**$DATA)
+          - pattern: |
+              $DATA = request.data
+              ...
+              $MODEL(**$DATA)
+
+  # ==============================================================================
+  # exec/eval with User Attributes (Extreme Case)
+  # ==============================================================================
+  - id: python-mass-assignment-exec
+    message: >-
+      Critical: User input used in dynamic attribute assignment via exec/eval.
+      This can lead to arbitrary code execution, not just mass assignment.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-915"
+      owasp: "A04:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: exec(f"$OBJ.{$ATTR} = ...")
+          - pattern: |
+              $ATTR = request.$METHOD.get(...)
+              ...
+              exec(... + $ATTR + ...)

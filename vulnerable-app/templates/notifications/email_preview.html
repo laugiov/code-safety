@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Template Preview - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V11:</strong> This form is vulnerable to Server-Side Template Injection (SSTI).<br>
+            Try: <code>{{ "{{ settings.SECRET_KEY }}" }}</code> or <code>{{ "{{ settings.DATABASES }}" }}</code>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Email Template Preview</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Recipient Name</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               value="John Doe" placeholder="Enter recipient name">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="template" class="form-label">Email Template (Django Template Syntax)</label>
+                        <textarea class="form-control font-monospace" id="template" name="template" rows="10"
+                                  placeholder="Enter your email template...">Hello {{ "{{ name }}" }},
+
+Thank you for your order!
+
+Best regards,
+VulnShop Team</textarea>
+                        <small class="text-muted">Use Django template syntax. Available variables: name, user, settings, request</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Preview Template</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>SSTI Payloads to Try</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled font-monospace small">
+                    <li><code>{{ "{{ settings.SECRET_KEY }}" }}</code> - Leak secret key</li>
+                    <li><code>{{ "{{ settings.DATABASES }}" }}</code> - Leak database config</li>
+                    <li><code>{{ "{{ user.password }}" }}</code> - Leak password hash</li>
+                    <li><code>{{ "{{ request.META }}" }}</code> - Leak request metadata</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,544 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VulnShop Ground Truth Vulnerabilities",
+  "description": "Definitive list of intentional vulnerabilities in VulnShop for benchmarking taint analysis tools",
+  "version": "1.0.0",
+  "created": "2024-01-15",
+  "total_vulnerabilities": 16,
+  "vulnerabilities": [
+    {
+      "id": "VULN-001",
+      "name": "SQL Injection (Authentication)",
+      "cwe": "CWE-89",
+      "owasp": "A03:2021",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "location": {
+        "file": "authentication/views.py",
+        "function": "login_view",
+        "line_start": 25,
+        "line_end": 35
+      },
+      "taint_flow": {
+        "source": "request.POST.get('username')",
+        "source_type": "UserControlled",
+        "sink": "cursor.execute(query)",
+        "sink_type": "SQL",
+        "propagation": [
+          "username variable assignment",
+          "f-string query construction"
+        ]
+      },
+      "description": "User-supplied username is directly interpolated into SQL query without parameterization, allowing authentication bypass.",
+      "exploit_example": "username: admin' OR '1'='1' --",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use parameterized queries: cursor.execute('SELECT * FROM users WHERE username = %s', [username])"
+    },
+    {
+      "id": "VULN-002",
+      "name": "SQL Injection (Product Search)",
+      "cwe": "CWE-89",
+      "owasp": "A03:2021",
+      "severity": "HIGH",
+      "cvss_score": 8.6,
+      "location": {
+        "file": "catalog/views.py",
+        "function": "search_products",
+        "line_start": 45,
+        "line_end": 55
+      },
+      "taint_flow": {
+        "source": "request.GET.get('q')",
+        "source_type": "UserControlled",
+        "sink": "cursor.execute(query)",
+        "sink_type": "SQL",
+        "propagation": [
+          "search_term assignment",
+          "string concatenation in query"
+        ]
+      },
+      "description": "Search term from URL parameter is concatenated into SQL query, enabling data exfiltration.",
+      "exploit_example": "?q=' UNION SELECT username, password FROM users --",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use Django ORM: Product.objects.filter(name__icontains=search_term)"
+    },
+    {
+      "id": "VULN-003",
+      "name": "Reflected XSS",
+      "cwe": "CWE-79",
+      "owasp": "A03:2021",
+      "severity": "MEDIUM",
+      "cvss_score": 6.1,
+      "location": {
+        "file": "catalog/views.py",
+        "function": "search_products",
+        "line_start": 60,
+        "line_end": 65
+      },
+      "taint_flow": {
+        "source": "request.GET.get('q')",
+        "source_type": "UserControlled",
+        "sink": "mark_safe(message)",
+        "sink_type": "XSS",
+        "propagation": [
+          "search_term assignment",
+          "f-string message construction",
+          "mark_safe call"
+        ]
+      },
+      "description": "Search term is reflected in response using mark_safe, bypassing auto-escaping.",
+      "exploit_example": "?q=<script>alert(document.cookie)</script>",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use Django's escape() function or template auto-escaping"
+    },
+    {
+      "id": "VULN-004",
+      "name": "Stored XSS",
+      "cwe": "CWE-79",
+      "owasp": "A03:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "reviews/views.py",
+        "function": "add_review",
+        "line_start": 30,
+        "line_end": 45
+      },
+      "taint_flow": {
+        "source": "request.POST.get('comment')",
+        "source_type": "UserControlled",
+        "sink": "Review.objects.create(comment=comment)",
+        "sink_type": "Database",
+        "secondary_sink": "mark_safe(review.comment) in template",
+        "propagation": [
+          "comment stored in database",
+          "retrieved and rendered with mark_safe"
+        ]
+      },
+      "description": "Review comment is stored in database and later rendered without escaping, enabling persistent XSS.",
+      "exploit_example": "comment: <img src=x onerror=alert('XSS')>",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": "partial"
+      },
+      "remediation": "Sanitize HTML with bleach.clean() before storage or display"
+    },
+    {
+      "id": "VULN-005",
+      "name": "Command Injection",
+      "cwe": "CWE-78",
+      "owasp": "A03:2021",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "location": {
+        "file": "admin_panel/views.py",
+        "function": "system_diagnostics",
+        "line_start": 50,
+        "line_end": 60
+      },
+      "taint_flow": {
+        "source": "request.POST.get('hostname')",
+        "source_type": "UserControlled",
+        "sink": "os.system(command)",
+        "sink_type": "CommandExecution",
+        "propagation": [
+          "hostname assignment",
+          "f-string command construction"
+        ]
+      },
+      "description": "Admin diagnostic tool passes user input to os.system, enabling arbitrary command execution.",
+      "exploit_example": "hostname: ; cat /etc/passwd",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use subprocess with shell=False and argument list: subprocess.run(['ping', '-c', '1', hostname])"
+    },
+    {
+      "id": "VULN-006",
+      "name": "Path Traversal",
+      "cwe": "CWE-22",
+      "owasp": "A01:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "admin_panel/views.py",
+        "function": "view_log",
+        "line_start": 75,
+        "line_end": 85
+      },
+      "taint_flow": {
+        "source": "request.GET.get('file')",
+        "source_type": "UserControlled",
+        "sink": "open(file_path, 'r')",
+        "sink_type": "FileSystem",
+        "propagation": [
+          "filename assignment",
+          "os.path.join with base directory",
+          "open call"
+        ]
+      },
+      "description": "Log viewer allows arbitrary file reading via ../ path traversal sequences.",
+      "exploit_example": "?file=../../../etc/passwd",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Validate resolved path starts with base directory: os.path.realpath(path).startswith(base_dir)"
+    },
+    {
+      "id": "VULN-007",
+      "name": "Insecure Direct Object Reference (IDOR)",
+      "cwe": "CWE-639",
+      "owasp": "A01:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "profile/views.py",
+        "function": "view_profile",
+        "line_start": 20,
+        "line_end": 30
+      },
+      "taint_flow": {
+        "source": "user_id URL parameter",
+        "source_type": "UserControlled",
+        "sink": "User.objects.get(pk=user_id)",
+        "sink_type": "DatabaseQuery",
+        "propagation": [
+          "user_id from URL",
+          "direct database lookup without authorization check"
+        ]
+      },
+      "description": "User profile accessed by ID without verifying requesting user owns the profile.",
+      "exploit_example": "/profile/view/1/ (accessing admin profile as regular user)",
+      "expected_detection": {
+        "pysa": "partial",
+        "codeql": "partial",
+        "semgrep": false
+      },
+      "remediation": "Add authorization check: if request.user.id != user_id: raise PermissionDenied"
+    },
+    {
+      "id": "VULN-008",
+      "name": "Mass Assignment",
+      "cwe": "CWE-915",
+      "owasp": "A04:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "profile/views.py",
+        "function": "update_profile",
+        "line_start": 45,
+        "line_end": 60
+      },
+      "taint_flow": {
+        "source": "request.POST.dict()",
+        "source_type": "UserControlled",
+        "sink": "user.__dict__.update(data)",
+        "sink_type": "AttributeAssignment",
+        "propagation": [
+          "POST data converted to dict",
+          "dict unpacked to model attributes"
+        ]
+      },
+      "description": "All POST parameters are assigned to user model, allowing is_admin/is_staff escalation.",
+      "exploit_example": "POST: is_admin=True&is_staff=True",
+      "expected_detection": {
+        "pysa": false,
+        "codeql": "partial",
+        "semgrep": "partial"
+      },
+      "remediation": "Use explicit field whitelist: allowed = ['first_name', 'last_name', 'email']"
+    },
+    {
+      "id": "VULN-009",
+      "name": "Server-Side Request Forgery (SSRF)",
+      "cwe": "CWE-918",
+      "owasp": "A10:2021",
+      "severity": "HIGH",
+      "cvss_score": 8.6,
+      "location": {
+        "file": "webhooks/views.py",
+        "function": "test_webhook",
+        "line_start": 25,
+        "line_end": 35
+      },
+      "taint_flow": {
+        "source": "request.POST.get('url')",
+        "source_type": "UserControlled",
+        "sink": "requests.get(url)",
+        "sink_type": "SSRF",
+        "propagation": [
+          "url assignment from POST",
+          "direct use in requests.get"
+        ]
+      },
+      "description": "Webhook tester allows requests to arbitrary URLs, enabling internal network scanning.",
+      "exploit_example": "url: http://169.254.169.254/latest/meta-data/",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Validate URL against allowlist, block private IP ranges"
+    },
+    {
+      "id": "VULN-010",
+      "name": "Insecure Deserialization",
+      "cwe": "CWE-502",
+      "owasp": "A08:2021",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "location": {
+        "file": "cart/views.py",
+        "function": "load_cart",
+        "line_start": 40,
+        "line_end": 50
+      },
+      "taint_flow": {
+        "source": "request.COOKIES.get('cart')",
+        "source_type": "Cookies",
+        "sink": "pickle.loads(decoded_data)",
+        "sink_type": "Deserialization",
+        "propagation": [
+          "cart cookie read",
+          "base64 decode",
+          "pickle.loads"
+        ]
+      },
+      "description": "Shopping cart data deserialized from cookie using pickle, enabling RCE.",
+      "exploit_example": "Crafted pickle payload executing os.system('id')",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use JSON for serialization, or sign data with HMAC"
+    },
+    {
+      "id": "VULN-011",
+      "name": "Server-Side Template Injection (SSTI)",
+      "cwe": "CWE-1336",
+      "owasp": "A03:2021",
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "location": {
+        "file": "notifications/views.py",
+        "function": "preview_email",
+        "line_start": 30,
+        "line_end": 45
+      },
+      "taint_flow": {
+        "source": "request.POST.get('template')",
+        "source_type": "UserControlled",
+        "sink": "Template(template_string).render(context)",
+        "sink_type": "TemplateInjection",
+        "propagation": [
+          "template content from POST",
+          "Django Template instantiation",
+          "render call"
+        ]
+      },
+      "description": "Email template preview allows arbitrary template injection, enabling code execution.",
+      "exploit_example": "{{ ''.__class__.__mro__[1].__subclasses__() }}",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use predefined templates, not user-supplied template strings"
+    },
+    {
+      "id": "VULN-012",
+      "name": "Hardcoded Secrets",
+      "cwe": "CWE-798",
+      "owasp": "A02:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "vulnshop/settings.py",
+        "function": null,
+        "line_start": 25,
+        "line_end": 30
+      },
+      "taint_flow": {
+        "source": null,
+        "source_type": "HardcodedValue",
+        "sink": "SECRET_KEY variable",
+        "sink_type": "Configuration",
+        "propagation": []
+      },
+      "description": "Django SECRET_KEY and database password hardcoded in settings file.",
+      "exploit_example": "Session forgery using known SECRET_KEY",
+      "expected_detection": {
+        "pysa": false,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use environment variables: SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')"
+    },
+    {
+      "id": "VULN-013",
+      "name": "Vulnerable Dependencies",
+      "cwe": "CWE-1035",
+      "owasp": "A06:2021",
+      "severity": "VARIABLE",
+      "cvss_score": null,
+      "location": {
+        "file": "requirements.txt",
+        "function": null,
+        "line_start": null,
+        "line_end": null
+      },
+      "taint_flow": {
+        "source": null,
+        "source_type": "Dependency",
+        "sink": null,
+        "sink_type": "Runtime",
+        "propagation": []
+      },
+      "description": "Intentionally outdated dependencies with known CVEs (Django, Pillow, etc.).",
+      "exploit_example": "Depends on specific CVE",
+      "expected_detection": {
+        "pysa": false,
+        "codeql": false,
+        "semgrep": false
+      },
+      "remediation": "Use pip-audit or safety to scan and update dependencies"
+    },
+    {
+      "id": "VULN-014",
+      "name": "Sensitive Data Logging",
+      "cwe": "CWE-532",
+      "owasp": "A09:2021",
+      "severity": "MEDIUM",
+      "cvss_score": 5.5,
+      "location": {
+        "file": "middleware/logging.py",
+        "function": "LoggingMiddleware.__call__",
+        "line_start": 20,
+        "line_end": 30
+      },
+      "taint_flow": {
+        "source": "request.POST",
+        "source_type": "UserControlled",
+        "sink": "logging.info(f'Request data: {request.POST}')",
+        "sink_type": "Logging",
+        "propagation": [
+          "POST data captured",
+          "logged including passwords/tokens"
+        ]
+      },
+      "description": "Middleware logs entire POST data including passwords and sensitive tokens.",
+      "exploit_example": "Password visible in application logs",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": "partial"
+      },
+      "remediation": "Redact sensitive fields before logging: data = {k: '***' if 'password' in k else v for k, v in request.POST.items()}"
+    },
+    {
+      "id": "VULN-015",
+      "name": "XML External Entity Injection (XXE)",
+      "cwe": "CWE-611",
+      "owasp": "A05:2021",
+      "severity": "HIGH",
+      "cvss_score": 7.5,
+      "location": {
+        "file": "api/views.py",
+        "function": "import_xml",
+        "line_start": 35,
+        "line_end": 50
+      },
+      "taint_flow": {
+        "source": "request.body",
+        "source_type": "UserControlled",
+        "sink": "etree.fromstring(xml_data)",
+        "sink_type": "XMLParser",
+        "propagation": [
+          "XML body received",
+          "parsed with external entities enabled"
+        ]
+      },
+      "description": "XML import parses untrusted XML with external entities enabled, allowing file read.",
+      "exploit_example": "<!DOCTYPE foo [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]><foo>&xxe;</foo>",
+      "expected_detection": {
+        "pysa": true,
+        "codeql": true,
+        "semgrep": true
+      },
+      "remediation": "Use defusedxml library or disable entity resolution: parser = etree.XMLParser(resolve_entities=False)"
+    },
+    {
+      "id": "VULN-016",
+      "name": "Missing Brute Force Protection",
+      "cwe": "CWE-307",
+      "owasp": "A07:2021",
+      "severity": "MEDIUM",
+      "cvss_score": 5.3,
+      "location": {
+        "file": "authentication/views.py",
+        "function": "login_view",
+        "line_start": 15,
+        "line_end": 45
+      },
+      "taint_flow": {
+        "source": null,
+        "source_type": "MissingControl",
+        "sink": null,
+        "sink_type": "Authentication",
+        "propagation": []
+      },
+      "description": "Login endpoint has no rate limiting or account lockout mechanism.",
+      "exploit_example": "Unlimited login attempts for credential stuffing",
+      "expected_detection": {
+        "pysa": false,
+        "codeql": false,
+        "semgrep": false
+      },
+      "remediation": "Implement django-axes or django-ratelimit for login protection"
+    }
+  ],
+  "detection_summary": {
+    "pysa": {
+      "expected_detections": 12,
+      "expected_rate": 75.0
+    },
+    "codeql": {
+      "expected_detections": 14,
+      "expected_rate": 87.5
+    },
+    "semgrep": {
+      "expected_detections": 11,
+      "expected_rate": 68.75
+    }
+  },
+  "categories": {
+    "injection": ["VULN-001", "VULN-002", "VULN-003", "VULN-004", "VULN-005", "VULN-011"],
+    "broken_access_control": ["VULN-006", "VULN-007", "VULN-008"],
+    "cryptographic_failures": ["VULN-012"],
+    "insecure_design": ["VULN-008"],
+    "security_misconfiguration": ["VULN-015"],
+    "vulnerable_components": ["VULN-013"],
+    "authentication_failures": ["VULN-016"],
+    "data_integrity_failures": ["VULN-010"],
+    "logging_monitoring_failures": ["VULN-014"],
+    "ssrf": ["VULN-009"]
+  }
+}

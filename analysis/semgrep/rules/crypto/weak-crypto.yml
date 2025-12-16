@@ -1,0 +1,295 @@
+# Weak Cryptography Detection Rules
+# Detects usage of weak or insecure cryptographic functions
+#
+# CWE-327: Use of a Broken or Risky Cryptographic Algorithm
+# CWE-328: Reversible One-Way Hash
+# OWASP A02:2021 - Cryptographic Failures
+
+rules:
+  # ==============================================================================
+  # MD5 Usage
+  # ==============================================================================
+  - id: weak-crypto-md5
+    message: >-
+      Weak cryptography: MD5 hash is cryptographically broken and should
+      not be used for security purposes (passwords, signatures, integrity).
+
+      MD5 is vulnerable to collision attacks and rainbow tables.
+      Use SHA-256/SHA-3 for integrity, bcrypt/argon2 for passwords.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-328"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+      likelihood: MEDIUM
+      impact: MEDIUM
+      references:
+        - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+        - https://en.wikipedia.org/wiki/MD5#Security
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: MD5.new(...)
+          - pattern: md5(...)
+          - pattern: Crypto.Hash.MD5.new(...)
+
+  # ==============================================================================
+  # SHA1 Usage
+  # ==============================================================================
+  - id: weak-crypto-sha1
+    message: >-
+      Weak cryptography: SHA-1 is deprecated for security purposes.
+      Collision attacks against SHA-1 are practical.
+
+      Use SHA-256 or SHA-3 instead for security applications.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-328"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.sha1(...)
+          - pattern: SHA1.new(...)
+          - pattern: sha1(...)
+          - pattern: Crypto.Hash.SHA1.new(...)
+
+  # ==============================================================================
+  # DES/3DES Usage
+  # ==============================================================================
+  - id: weak-crypto-des
+    message: >-
+      Weak cryptography: DES and 3DES are deprecated. DES has a 56-bit key
+      (trivially brute-forced) and 3DES is slow and limited.
+
+      Use AES-256-GCM for symmetric encryption.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-327"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: DES.new(...)
+          - pattern: DES3.new(...)
+          - pattern: Crypto.Cipher.DES.new(...)
+          - pattern: Crypto.Cipher.DES3.new(...)
+          - pattern: Blowfish.new(...)
+
+  # ==============================================================================
+  # RC4 Usage
+  # ==============================================================================
+  - id: weak-crypto-rc4
+    message: >-
+      Weak cryptography: RC4 stream cipher has known biases and vulnerabilities.
+      It should not be used for encryption.
+
+      Use AES-GCM or ChaCha20-Poly1305 instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-327"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: ARC4.new(...)
+          - pattern: RC4.new(...)
+          - pattern: Crypto.Cipher.ARC4.new(...)
+
+  # ==============================================================================
+  # ECB Mode
+  # ==============================================================================
+  - id: weak-crypto-ecb-mode
+    message: >-
+      Weak cryptography: ECB mode does not provide semantic security.
+      Identical plaintext blocks produce identical ciphertext blocks,
+      leaking patterns.
+
+      Use CBC, CTR, or preferably GCM mode for authenticated encryption.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-327"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: AES.new(..., AES.MODE_ECB, ...)
+          - pattern: AES.new(..., mode=AES.MODE_ECB, ...)
+          - pattern: Cipher.new(..., Cipher.MODE_ECB, ...)
+          - pattern: Crypto.Cipher.AES.new(..., Crypto.Cipher.AES.MODE_ECB)
+
+  # ==============================================================================
+  # Weak Random for Security
+  # ==============================================================================
+  - id: weak-crypto-random
+    message: >-
+      Insecure random number generator used for security-sensitive operation.
+      The 'random' module is not cryptographically secure.
+
+      Use 'secrets' module or 'os.urandom()' for security purposes.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-330"
+      owasp: "A02:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          # Random for tokens/passwords
+          - pattern: |
+              import random
+              ...
+              random.choice(...) # used for $TOKEN
+          - pattern: random.randint(...) # for security
+          - pattern: random.random() # for security
+          # Token generation with random
+          - pattern: |
+              $TOKEN = ''.join(random.choice(...) for ...)
+          - pattern: |
+              $PASSWORD = ''.join(random.choices(...))
+
+  # ==============================================================================
+  # Hardcoded IV/Nonce
+  # ==============================================================================
+  - id: weak-crypto-static-iv
+    message: >-
+      Static IV/nonce in encryption. IVs and nonces must be unique for each
+      encryption operation. Reusing IVs breaks the security of many modes.
+
+      Generate a random IV using os.urandom(16) for each encryption.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-329"
+      owasp: "A02:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: AES.new($KEY, ..., iv=b"...")
+          - pattern: AES.new($KEY, ..., nonce=b"...")
+          - pattern: |
+              $IV = b"..."
+              ...
+              AES.new($KEY, ..., iv=$IV)
+          - pattern: |
+              $NONCE = b"..."
+              ...
+              AES.new($KEY, ..., nonce=$NONCE)
+
+  # ==============================================================================
+  # Hardcoded Encryption Key
+  # ==============================================================================
+  - id: weak-crypto-hardcoded-key
+    message: >-
+      Hardcoded encryption key detected. Encryption keys should be stored
+      securely and loaded from environment or key management systems.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-321"
+      owasp: "A02:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: AES.new(b"...", ...)
+          - pattern: AES.new("...", ...)
+          - pattern: |
+              $KEY = b"..."
+              ...
+              AES.new($KEY, ...)
+          - pattern: Fernet(b"...")
+          - pattern: |
+              $KEY = "..."
+              ...
+              Fernet($KEY)
+
+  # ==============================================================================
+  # Insecure Password Hashing
+  # ==============================================================================
+  - id: weak-crypto-password-hash
+    message: >-
+      Insecure password hashing: Using plain hash functions (MD5, SHA) for
+      passwords. These are fast and vulnerable to rainbow tables/brute force.
+
+      Use bcrypt, scrypt, argon2, or PBKDF2 with high iteration count.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-916"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5($PASSWORD).hexdigest()
+          - pattern: hashlib.sha1($PASSWORD).hexdigest()
+          - pattern: hashlib.sha256($PASSWORD).hexdigest()
+          - pattern: |
+              $HASH = hashlib.$ALGO($PASSWORD)
+              ...
+              $HASH.hexdigest()
+      - metavariable-regex:
+          metavariable: $PASSWORD
+          regex: ".*(password|passwd|pwd|secret).*"
+          ignore-case: true
+
+  # ==============================================================================
+  # Low PBKDF2 Iterations
+  # ==============================================================================
+  - id: weak-crypto-low-pbkdf2-iterations
+    message: >-
+      PBKDF2 with low iteration count. OWASP recommends at least 600,000
+      iterations for SHA-256 as of 2023.
+
+      Increase iterations to slow down brute-force attacks.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-916"
+      owasp: "A02:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: pbkdf2_hmac(..., iterations=$COUNT, ...)
+          - pattern: PBKDF2(..., count=$COUNT, ...)
+      - metavariable-comparison:
+          metavariable: $COUNT
+          comparison: $COUNT < 100000
+
+  # ==============================================================================
+  # SSL/TLS Verification Disabled
+  # ==============================================================================
+  - id: weak-crypto-ssl-verify-disabled
+    message: >-
+      SSL/TLS certificate verification disabled. This allows man-in-the-middle
+      attacks. Always verify certificates in production.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-295"
+      owasp: "A02:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: requests.get(..., verify=False, ...)
+          - pattern: requests.post(..., verify=False, ...)
+          - pattern: requests.put(..., verify=False, ...)
+          - pattern: requests.delete(..., verify=False, ...)
+          - pattern: requests.request(..., verify=False, ...)
+          - pattern: urllib3.disable_warnings(...)
+          - pattern: ssl._create_unverified_context()

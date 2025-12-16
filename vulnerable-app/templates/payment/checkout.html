@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Checkout</h2>
+
+        <form method="post" action="{% url 'payment:process_payment' %}" id="checkoutForm">
+            {% csrf_token %}
+
+            <!-- Shipping Address -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Shipping Address</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="shipping_name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="shipping_name" name="shipping_name" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="shipping_address" class="form-label">Street Address</label>
+                            <textarea class="form-control" id="shipping_address" name="shipping_address" rows="2" required></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="shipping_city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="shipping_city" name="shipping_city" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="shipping_state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="shipping_state" name="shipping_state" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="shipping_zip" class="form-label">ZIP Code</label>
+                            <input type="text" class="form-control" id="shipping_zip" name="shipping_zip" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing Address -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Billing Address</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="sameAsShipping" checked>
+                        <label class="form-check-label" for="sameAsShipping">Same as shipping address</label>
+                    </div>
+                </div>
+                <div class="card-body" id="billingFields" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="billing_name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="billing_name" name="billing_name">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label for="billing_address" class="form-label">Street Address</label>
+                            <textarea class="form-control" id="billing_address" name="billing_address" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="billing_city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="billing_city" name="billing_city">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="billing_state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="billing_state" name="billing_state">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="billing_zip" class="form-label">ZIP Code</label>
+                            <input type="text" class="form-control" id="billing_zip" name="billing_zip">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Payment Information</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Warning about V12 -->
+                    <div class="alert alert-warning small">
+                        <strong>V12:</strong> Payment is processed using hardcoded API keys from settings.py
+                    </div>
+
+                    {% if payment_methods %}
+                    <div class="mb-3">
+                        <label class="form-label">Saved Payment Methods</label>
+                        {% for method in payment_methods %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="payment_method"
+                                   id="method{{ method.id }}" value="{{ method.id }}">
+                            <label class="form-check-label" for="method{{ method.id }}">
+                                {{ method.masked_number }} ({{ method.expiry }})
+                            </label>
+                        </div>
+                        {% endfor %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="payment_method"
+                                   id="newCard" value="new" checked>
+                            <label class="form-check-label" for="newCard">Use a new card</label>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div id="newCardFields">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="card_number" class="form-label">Card Number</label>
+                                <input type="text" class="form-control" id="card_number" name="card_number"
+                                       placeholder="1234 5678 9012 3456">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="expiry" class="form-label">Expiry Date</label>
+                                <input type="text" class="form-control" id="expiry" name="expiry"
+                                       placeholder="MM/YY">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="cvv" class="form-label">CVV</label>
+                                <input type="text" class="form-control" id="cvv" name="cvv"
+                                       placeholder="123">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success btn-lg w-100">Place Order</button>
+        </form>
+    </div>
+
+    <!-- Order Summary -->
+    <div class="col-md-4">
+        <div class="card sticky-top" style="top: 20px;">
+            <div class="card-header">
+                <h5>Order Summary</h5>
+            </div>
+            <div class="card-body">
+                {% for item in items %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>{{ item.product.name }} x {{ item.quantity }}</span>
+                    <span>${{ item.subtotal }}</span>
+                </div>
+                {% endfor %}
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Subtotal</span>
+                    <span>${{ subtotal }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Tax</span>
+                    <span>${{ tax|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Shipping</span>
+                    <span>{% if shipping > 0 %}${{ shipping }}{% else %}FREE{% endif %}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total</strong>
+                    <strong class="text-primary">${{ total|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('sameAsShipping').addEventListener('change', function() {
+    document.getElementById('billingFields').style.display = this.checked ? 'none' : 'block';
+});
+</script>
+{% endblock %}
+{% endblock %}

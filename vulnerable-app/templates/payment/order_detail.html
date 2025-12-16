@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Order {{ order.order_number }} - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'payment:order_history' %}">Orders</a></li>
+                <li class="breadcrumb-item active">{{ order.order_number }}</li>
+            </ol>
+        </nav>
+
+        <h2>Order {{ order.order_number }}</h2>
+
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Order Items -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Order Items</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Price</th>
+                                    <th>Qty</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items.all %}
+                                <tr>
+                                    <td>{{ item.product_name }}</td>
+                                    <td><code>{{ item.product_sku }}</code></td>
+                                    <td>${{ item.price }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>${{ item.subtotal }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end">Subtotal:</td>
+                                    <td>${{ order.subtotal }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end">Tax:</td>
+                                    <td>${{ order.tax }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end">Shipping:</td>
+                                    <td>${{ order.shipping }}</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                    <td><strong>${{ order.total }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Addresses -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6>Shipping Address</h6>
+                            </div>
+                            <div class="card-body">
+                                {{ order.shipping_name }}<br>
+                                {{ order.shipping_address }}<br>
+                                {{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_zip }}<br>
+                                {{ order.shipping_country }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6>Billing Address</h6>
+                            </div>
+                            <div class="card-body">
+                                {{ order.billing_name }}<br>
+                                {{ order.billing_address }}<br>
+                                {{ order.billing_city }}, {{ order.billing_state }} {{ order.billing_zip }}<br>
+                                {{ order.billing_country }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Order Status -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Order Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Status:</strong>
+                            {% if order.status == 'delivered' %}
+                            <span class="badge bg-success">{{ order.status }}</span>
+                            {% elif order.status == 'shipped' %}
+                            <span class="badge bg-info">{{ order.status }}</span>
+                            {% elif order.status == 'cancelled' %}
+                            <span class="badge bg-danger">{{ order.status }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ order.status }}</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Order Date:</strong><br>{{ order.created_at|date:"F d, Y H:i" }}</p>
+                        <p><strong>Last Updated:</strong><br>{{ order.updated_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                </div>
+
+                <!-- Transactions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6>Transactions</h6>
+                    </div>
+                    <div class="card-body">
+                        {% for txn in order.transactions.all %}
+                        <div class="mb-2">
+                            <small class="text-muted">{{ txn.created_at|date:"M d, Y H:i" }}</small><br>
+                            <span class="badge bg-{{ txn.status }}">{{ txn.status }}</span>
+                            ${{ txn.amount }}
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">No transactions recorded.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="{% url 'payment:order_history' %}" class="btn btn-outline-primary">Back to Orders</a>
+    </div>
+</div>
+{% endblock %}

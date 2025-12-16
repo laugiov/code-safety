@@ -1,0 +1,171 @@
+# XML External Entity (XXE) Injection Detection Rules
+# Detects XXE vulnerabilities in XML parsing
+#
+# CWE-611: Improper Restriction of XML External Entity Reference
+# OWASP A05:2021 - Security Misconfiguration
+
+rules:
+  # ==============================================================================
+  # lxml.etree XXE
+  # ==============================================================================
+  - id: xxe-lxml-etree
+    message: >-
+      XML External Entity (XXE) vulnerability: lxml.etree parsing is vulnerable
+      to XXE attacks by default. External entities can be used to read local files,
+      perform SSRF, or cause denial of service.
+
+      Vulnerable: etree.fromstring(user_xml)
+      Safe: Use defusedxml or configure parser with resolve_entities=False
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      technology:
+        - python
+        - lxml
+      confidence: HIGH
+      likelihood: HIGH
+      impact: HIGH
+      references:
+        - https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing
+        - https://lxml.de/FAQ.html#how-do-i-use-lxml-safely-as-a-web-service-endpoint
+    patterns:
+      - pattern-either:
+          # Direct parsing without secure parser
+          - pattern: lxml.etree.fromstring($USER_INPUT)
+          - pattern: lxml.etree.fromstring($USER_INPUT, ...)
+          - pattern: etree.fromstring($USER_INPUT)
+          - pattern: etree.fromstring($USER_INPUT, parser=etree.XMLParser())
+          - pattern: lxml.etree.parse($USER_INPUT)
+          - pattern: etree.parse($USER_INPUT)
+          - pattern: lxml.etree.XML($USER_INPUT)
+          - pattern: etree.XML($USER_INPUT)
+          # From request body
+          - pattern: |
+              $DATA = request.body
+              ...
+              etree.fromstring($DATA)
+          - pattern: |
+              $DATA = request.body
+              ...
+              lxml.etree.fromstring($DATA)
+
+  # ==============================================================================
+  # xml.etree.ElementTree XXE
+  # ==============================================================================
+  - id: xxe-xml-etree
+    message: >-
+      Potential XXE: xml.etree.ElementTree parsing of user input.
+      While ElementTree is less vulnerable than lxml, it can still be exploited
+      in certain configurations. Use defusedxml for safety.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: xml.etree.ElementTree.fromstring($USER_INPUT)
+          - pattern: ET.fromstring($USER_INPUT)
+          - pattern: ElementTree.fromstring($USER_INPUT)
+          - pattern: xml.etree.ElementTree.parse($USER_INPUT)
+          - pattern: ET.parse($USER_INPUT)
+
+  # ==============================================================================
+  # xml.dom.minidom XXE
+  # ==============================================================================
+  - id: xxe-xml-minidom
+    message: >-
+      XXE vulnerability: xml.dom.minidom parsing of untrusted XML.
+      Use defusedxml.minidom instead.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      confidence: HIGH
+    patterns:
+      - pattern-either:
+          - pattern: xml.dom.minidom.parseString($USER_INPUT)
+          - pattern: minidom.parseString($USER_INPUT)
+          - pattern: xml.dom.minidom.parse($USER_INPUT)
+          - pattern: minidom.parse($USER_INPUT)
+
+  # ==============================================================================
+  # xml.sax XXE
+  # ==============================================================================
+  - id: xxe-xml-sax
+    message: >-
+      XXE vulnerability: xml.sax parsing of untrusted XML.
+      SAX parsers can be vulnerable to XXE unless properly configured.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: xml.sax.parseString($USER_INPUT, ...)
+          - pattern: xml.sax.parse($USER_INPUT, ...)
+          - pattern: sax.parseString($USER_INPUT, ...)
+
+  # ==============================================================================
+  # Unsafe XMLParser Configuration
+  # ==============================================================================
+  - id: xxe-unsafe-xmlparser
+    message: >-
+      Unsafe XML parser configuration: resolve_entities is enabled.
+      Set resolve_entities=False and no_network=True for safety.
+    severity: WARNING
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      confidence: MEDIUM
+    patterns:
+      - pattern-either:
+          - pattern: etree.XMLParser(resolve_entities=True)
+          - pattern: lxml.etree.XMLParser(resolve_entities=True)
+          - pattern: XMLParser(resolve_entities=True)
+
+  # ==============================================================================
+  # Request Body to XML Parser (Full Taint Flow)
+  # ==============================================================================
+  - id: python-request-to-xxe
+    message: >-
+      XXE vulnerability: HTTP request body flows to XML parser.
+      Use defusedxml or configure parser to disable external entities.
+    severity: ERROR
+    languages: [python]
+    metadata:
+      cwe: "CWE-611"
+      owasp: "A05:2021"
+      category: security
+      confidence: HIGH
+    mode: taint
+    pattern-sources:
+      - pattern: request.body
+      - pattern: request.data
+      - pattern: request.POST.get(...)
+      - pattern: request.FILES[...]
+    pattern-sinks:
+      - pattern: etree.fromstring($DATA, ...)
+        focus-metavariable: $DATA
+      - pattern: lxml.etree.fromstring($DATA, ...)
+        focus-metavariable: $DATA
+      - pattern: xml.etree.ElementTree.fromstring($DATA)
+        focus-metavariable: $DATA
+      - pattern: minidom.parseString($DATA)
+        focus-metavariable: $DATA
+    pattern-sanitizers:
+      - pattern: defusedxml.ElementTree.fromstring(...)
+      - pattern: defusedxml.lxml.fromstring(...)
+      - pattern: defusedxml.minidom.parseString(...)

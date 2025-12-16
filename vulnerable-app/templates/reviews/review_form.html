@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Write Review - VulnShop{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <!-- Vulnerability Warning -->
+        <div class="alert alert-danger">
+            <strong>V04:</strong> This form is vulnerable to Stored XSS. HTML and JavaScript in the comment will be executed when the review is displayed.<br>
+            Try: <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Write a Review for {{ product.name }}</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">Rating</label>
+                        <select class="form-select" id="rating" name="rating" required>
+                            <option value="5">5 Stars - Excellent</option>
+                            <option value="4">4 Stars - Good</option>
+                            <option value="3">3 Stars - Average</option>
+                            <option value="2">2 Stars - Poor</option>
+                            <option value="1">1 Star - Terrible</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Review Title (optional)</label>
+                        <input type="text" class="form-control" id="title" name="title"
+                               placeholder="Summarize your review">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Your Review</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="5"
+                                  placeholder="Share your experience with this product..." required></textarea>
+                        <small class="text-muted">HTML is allowed (vulnerable to XSS)</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                    <a href="{% url 'catalog:product_detail' slug=product.slug %}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

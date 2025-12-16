@@ -1,0 +1,44 @@
+# VulnShop Security Query Suite
+# Comprehensive security analysis suite for the VulnShop Django application
+#
+# This suite includes:
+# - All custom VulnShop security queries
+# - Standard Python security queries
+# - OWASP Top 10 related queries
+#
+# Usage:
+#   codeql database analyze db vulnshop-security.qls --format=sarif-latest
+
+- description: VulnShop Security Analysis Suite
+
+# Include all queries from this pack
+- queries: .
+- include:
+    kind:
+      - problem
+      - path-problem
+    tags contain: security
+
+# Import standard Python security queries
+- import: codeql-suites/python-security-extended.qls
+  from: codeql/python-queries
+
+# Import code quality queries that have security implications
+- import: codeql-suites/python-security-and-quality.qls
+  from: codeql/python-queries
+
+# Filter to focus on most relevant queries
+- include:
+    tags contain:
+      - external/cwe/cwe-89   # SQL Injection
+      - external/cwe/cwe-78   # Command Injection
+      - external/cwe/cwe-79   # XSS
+      - external/cwe/cwe-22   # Path Traversal
+      - external/cwe/cwe-918  # SSRF
+      - external/cwe/cwe-502  # Deserialization
+      - external/cwe/cwe-611  # XXE
+      - external/cwe/cwe-798  # Hardcoded Credentials
+      - external/cwe/cwe-532  # Sensitive Logging
+      - external/cwe/cwe-639  # IDOR
+      - external/cwe/cwe-915  # Mass Assignment
+      - external/cwe/cwe-1336 # SSTI

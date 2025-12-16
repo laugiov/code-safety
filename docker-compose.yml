@@ -1,0 +1,145 @@
+# =============================================================================
+# Docker Compose - Taint Analysis Masterclass
+# =============================================================================
+# One-command setup for the entire project.
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose up -d vulnshop     # Start only VulnShop
+#   docker-compose up -d docs         # Start only documentation
+#   docker-compose down               # Stop all services
+#   docker-compose logs -f vulnshop   # View VulnShop logs
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # VulnShop - Vulnerable Django Application
+  # ===========================================================================
+  vulnshop:
+    build:
+      context: ./vulnerable-app
+      dockerfile: Dockerfile
+    container_name: vulnshop
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-DEVELOPMENT-ONLY-NOT-FOR-PRODUCTION
+      - DATABASE_URL=sqlite:///db.sqlite3
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+    volumes:
+      - ./vulnerable-app:/app
+      - vulnshop-db:/app/db
+    networks:
+      - taint-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Documentation Server
+  # ===========================================================================
+  docs:
+    image: squidfunk/mkdocs-material:latest
+    container_name: taint-docs
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./docs:/docs
+    command: serve --dev-addr=0.0.0.0:8000
+    networks:
+      - taint-network
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Semgrep Analysis (on-demand)
+  # ===========================================================================
+  semgrep:
+    image: semgrep/semgrep:latest
+    container_name: taint-semgrep
+    volumes:
+      - ./vulnerable-app:/src
+      - ./analysis/semgrep:/rules
+      - ./analysis/semgrep/results:/results
+    working_dir: /src
+    command: >
+      semgrep scan
+        --config /rules/rules/
+        --config "p/python"
+        --config "p/django"
+        --sarif
+        --output /results/semgrep_results.sarif
+        --json-output /results/semgrep_results.json
+        .
+    networks:
+      - taint-network
+    profiles:
+      - analysis
+
+  # ===========================================================================
+  # PostgreSQL (optional, for production-like testing)
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: taint-postgres
+    environment:
+      - POSTGRES_DB=vulnshop
+      - POSTGRES_USER=vulnshop
+      - POSTGRES_PASSWORD=vulnshop_dev_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - taint-network
+    profiles:
+      - production
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vulnshop"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================================================
+  # Redis (optional, for caching/sessions)
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: taint-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - taint-network
+    profiles:
+      - production
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  taint-network:
+    driver: bridge
+    name: taint-analysis-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  vulnshop-db:
+    name: vulnshop-database
+  postgres-data:
+    name: taint-postgres-data
+  redis-data:
+    name: taint-redis-data

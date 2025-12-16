@@ -1,0 +1,37 @@
+# VulnShop Full Query Suite
+# Complete analysis suite including security and code quality queries
+#
+# This suite includes all security queries plus:
+# - Code quality analysis
+# - Best practices checks
+# - Performance considerations
+#
+# Usage:
+#   codeql database analyze db vulnshop-full.qls --format=sarif-latest
+
+- description: VulnShop Full Analysis Suite
+
+# Include all queries from this pack
+- queries: .
+
+# Include all problem and path-problem queries
+- include:
+    kind:
+      - problem
+      - path-problem
+
+# Import all standard Python queries
+- import: codeql-suites/python-security-extended.qls
+  from: codeql/python-queries
+
+- import: codeql-suites/python-security-and-quality.qls
+  from: codeql/python-queries
+
+- import: codeql-suites/python-code-quality.qls
+  from: codeql/python-queries
+
+# Exclude known noisy queries
+- exclude:
+    id:
+      - py/unused-import  # Too noisy for Django projects
+      - py/unused-local-variable  # Too noisy
