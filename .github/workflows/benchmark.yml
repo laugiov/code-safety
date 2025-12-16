@@ -98,7 +98,7 @@ jobs:
             2>&1 || echo "Report generation completed with warnings"
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: benchmark-results
           path: |
