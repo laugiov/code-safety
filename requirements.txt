@@ -1,0 +1,41 @@
+# =============================================================================
+# Taint Analysis Masterclass - Production Dependencies
+# =============================================================================
+
+# Django Framework
+Django>=4.2,<5.0
+djangorestframework>=3.14.0
+
+# Database
+psycopg2-binary>=2.9.0
+
+# Security (intentionally old versions for vulnerability demos)
+# WARNING: These are intentionally vulnerable - DO NOT use in production
+PyYAML>=5.4.0
+requests>=2.28.0
+Pillow>=9.0.0
+
+# XML Processing (for XXE demos)
+lxml>=4.9.0
+defusedxml>=0.7.0
+
+# Template engines
+Jinja2>=3.1.0
+
+# Utilities
+python-dotenv>=1.0.0
+bleach>=6.0.0
+
+# HTTP
+urllib3>=1.26.0
+httpx>=0.24.0
+
+# Serialization
+dill>=0.3.0
+jsonpickle>=3.0.0
+
+# Stripe (for payment demos)
+stripe>=5.0.0
+
+# AWS (for SSRF demos)
+boto3>=1.26.0
