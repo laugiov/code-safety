@@ -69,8 +69,7 @@ rules:
           - pattern: print(f"...{$PASSWORD}...")
       - metavariable-regex:
           metavariable: $PASSWORD
-          regex: '.*(password|passwd|pwd|secret|token|credential|api_key).*'
-          ignore-case: true
+          regex: '(?i).*(password|passwd|pwd|secret|token|credential|api_key).*'
 
   # ==============================================================================
   # Logging Credit Card Data
@@ -95,8 +94,7 @@ rules:
           - pattern: logger.$LEVEL(..., $CARD, ...)
       - metavariable-regex:
           metavariable: $CARD
-          regex: '.*(card_number|card_num|cvv|cvc|credit_card|cc_number).*'
-          ignore-case: true
+          regex: '(?i).*(card_number|card_num|cvv|cvc|credit_card|cc_number).*'
 
   # ==============================================================================
   # Logging Session Data
@@ -121,8 +119,7 @@ rules:
           - pattern: logging.$LEVEL(..., $SESSION_KEY, ...)
       - metavariable-regex:
           metavariable: $SESSION_KEY
-          regex: '.*(session_id|session_key|sessionid).*'
-          ignore-case: true
+          regex: '(?i).*(session_id|session_key|sessionid).*'
 
   # ==============================================================================
   # Logging User Objects (May Contain Passwords)
@@ -138,11 +135,9 @@ rules:
       owasp: "A09:2021"
       category: security
       confidence: LOW
-    patterns:
-      - pattern-either:
-          - pattern: logging.$LEVEL(..., $USER.__dict__, ...)
-          - pattern: logging.$LEVEL(f"...{$USER.__dict__}...")
-          - pattern: logger.$LEVEL(f"User: {$USER}")
+    pattern-either:
+      - pattern: logging.$LEVEL(..., $USER.__dict__, ...)
+      - pattern: logger.$LEVEL(..., $USER.__dict__, ...)
 
   # ==============================================================================
   # print() with Sensitive Data (Debug Statements)
@@ -167,8 +162,7 @@ rules:
           - pattern: print($PASSWORD)
       - metavariable-regex:
           metavariable: $PASSWORD
-          regex: '.*(password|secret|token).*'
-          ignore-case: true
+          regex: '(?i).*(password|secret|token).*'
 
   # ==============================================================================
   # Exception Logging with Sensitive Data
@@ -186,15 +180,8 @@ rules:
       confidence: LOW
     patterns:
       - pattern-either:
-          - pattern: |
-              except $EXCEPTION as $E:
-                ...
-                logging.exception(..., $SENSITIVE, ...)
-          - pattern: |
-              except $EXCEPTION as $E:
-                ...
-                logger.exception(..., $SENSITIVE, ...)
+          - pattern: logging.exception(..., $SENSITIVE, ...)
+          - pattern: logger.exception(..., $SENSITIVE, ...)
       - metavariable-regex:
           metavariable: $SENSITIVE
-          regex: '.*(password|secret|token|credential).*'
-          ignore-case: true
+          regex: '(?i).*(password|secret|token|credential).*'

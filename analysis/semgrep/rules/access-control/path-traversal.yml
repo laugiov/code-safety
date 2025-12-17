@@ -123,14 +123,10 @@ rules:
       technology:
         - django
       confidence: HIGH
-    patterns:
-      - pattern-either:
-          - pattern: FileResponse(open($BASE + $USER_INPUT, ...))
-          - pattern: FileResponse(open(os.path.join($BASE, $USER_INPUT), ...))
-          - pattern: |
-              $FILENAME = request.$METHOD.get(...)
-              ...
-              FileResponse(open(...$FILENAME..., ...))
+    pattern-either:
+      - pattern: FileResponse(open($BASE + $USER_INPUT, ...))
+      - pattern: FileResponse(open(os.path.join($BASE, $USER_INPUT), ...))
+      - pattern: FileResponse(open(f"...", ...))
 
   # ==============================================================================
   # send_file / send_from_directory (Flask)
@@ -148,14 +144,10 @@ rules:
       technology:
         - flask
       confidence: HIGH
-    patterns:
-      - pattern-either:
-          - pattern: send_file($BASE + $USER_INPUT)
-          - pattern: send_file(f"...{$USER_INPUT}...")
-          - pattern: |
-              $FILENAME = request.args.get(...)
-              ...
-              send_file(...$FILENAME...)
+    pattern-either:
+      - pattern: send_file($BASE + $USER_INPUT)
+      - pattern: send_file(os.path.join($BASE, $USER_INPUT))
+      - pattern: send_file(f"...")
 
   # ==============================================================================
   # Request Data to File Path (Full Taint Flow)

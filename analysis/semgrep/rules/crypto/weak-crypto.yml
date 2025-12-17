@@ -144,20 +144,13 @@ rules:
       owasp: "A02:2021"
       category: security
       confidence: MEDIUM
-    patterns:
-      - pattern-either:
-          # Random for tokens/passwords
-          - pattern: |
-              import random
-              ...
-              random.choice(...) # used for $TOKEN
-          - pattern: random.randint(...) # for security
-          - pattern: random.random() # for security
-          # Token generation with random
-          - pattern: |
-              $TOKEN = ''.join(random.choice(...) for ...)
-          - pattern: |
-              $PASSWORD = ''.join(random.choices(...))
+    pattern-either:
+      - pattern: random.randint(...)
+      - pattern: random.random()
+      - pattern: random.choice(...)
+      - pattern: random.choices(...)
+      - pattern: random.sample(...)
+      - pattern: random.shuffle(...)
 
   # ==============================================================================
   # Hardcoded IV/Nonce
@@ -243,8 +236,7 @@ rules:
               $HASH.hexdigest()
       - metavariable-regex:
           metavariable: $PASSWORD
-          regex: ".*(password|passwd|pwd|secret).*"
-          ignore-case: true
+          regex: "(?i).*(password|passwd|pwd|secret).*"
 
   # ==============================================================================
   # Low PBKDF2 Iterations
