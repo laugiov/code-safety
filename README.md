@@ -1,85 +1,28 @@
-# Code Safety — Taint Analysis & SAST Benchmark Reference
+# Code Safety: Taint Analysis & SAST Benchmark
 
-A **Security Engineering** reference implementation to evaluate and operationalize
-**taint analysis** in AppSec programs: **Pysa**, **CodeQL**, and **Semgrep** over a controlled Django benchmark app.
+[![CI](https://github.com/laugiov/code-safety/actions/workflows/ci.yml/badge.svg)](https://github.com/laugiov/code-safety/actions/workflows/ci.yml)
+[![Semgrep](https://github.com/laugiov/code-safety/actions/workflows/semgrep-analysis.yml/badge.svg)](https://github.com/laugiov/code-safety/actions/workflows/semgrep-analysis.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Django 4.2](https://img.shields.io/badge/django-4.2-green.svg)](https://www.djangoproject.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
-[![GitHub license](https://img.shields.io/github/license/laugiov/code-safety)](https://github.com/laugiov/code-safety/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/laugiov/code-safety)](https://github.com/laugiov/code-safety/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/laugiov/code-safety)](https://github.com/laugiov/code-safety/issues)
+> **Lab only:** VulnShop is intentionally vulnerable. Do not deploy to production.
 
-> **Lab only:** VulnShop is intentionally vulnerable. Do not deploy to production or expose to the Internet.
+## Context
 
----
+I built this project to explore how modern SAST tools handle taint analysis in practice. The idea was simple: create a controlled Django app with known vulnerabilities, then run Pysa, CodeQL, and Semgrep against it to see what they catch and what they miss.
 
-## Project Relevance
+The result is a benchmark with 16 OWASP Top 10 cases, each with documented taint flows (source, sink, sanitizer). This lets me measure detection rates objectively and understand where each tool shines or falls short.
 
-This repo demonstrates **AppSec / Security Engineering** capabilities:
+## What I wanted to demonstrate
 
-- Building and tuning taint-analysis rules (sources / sinks / sanitizers)
-- Operationalizing SAST in CI with SARIF + PR annotations
-- Benchmarking tools with ground truth (precision / recall mindset)
-- Designing governance for false positives and scale
+This repo reflects work I do in AppSec and Security Engineering: writing custom taint-analysis rules, integrating SAST into CI pipelines with SARIF output, and thinking about false positive management at scale. The `docs/` folder covers enterprise patterns like governance and rollout strategies.
 
----
+If you're using the project, start with the Semgrep rules in `analysis/semgrep/rules/` and the ground truth definitions in `benchmarks/ground-truth/`. Run `make analyze-semgrep` to see the full detection pipeline.
 
-## Evaluate in 15 Minutes
+## The benchmark app (VulnShop)
 
-1. Open `docs/` → start with **Benchmarks** and **Enterprise** sections
-2. Review `analysis/semgrep/rules/` and the **ground truth** in `benchmarks/ground-truth/`
-3. Check CI templates in `.github/workflows/` for SARIF upload & PR annotations
-4. Run `make analyze-semgrep` (fast path) to see end-to-end detection → SARIF output
-
----
-
-## Overview
-
-| Feature | Description |
-|---------|-------------|
-| **Benchmark App** | Controlled Django app with 16 documented OWASP Top 10 cases |
-| **Multi-Tool Analysis** | Configurations for Pysa (Meta), CodeQL (GitHub), and Semgrep |
-| **CI/CD Integration** | CI templates with SARIF upload and PR annotations (adaptable to enterprise pipelines) |
-| **Ground Truth** | Quantitative comparison with documented taint flows |
-| **Enterprise Patterns** | Scaling, false positive management, and governance documentation |
-
----
-
-## Project Status
-
-> **Active reference project** — some tool integrations require environment-specific setup (see matrix below).
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| VulnShop Application | Complete | All 16 cases implemented and documented |
-| Semgrep Rules | Complete | 92 rules validated, 226 findings |
-| Pysa Configuration | Setup required | Models defined, requires Pyre runtime |
-| CodeQL Queries | Setup required | Queries present, requires CodeQL CLI |
-| Docker Setup | Pending validation | docker-compose.yml provided |
-| CI/CD Workflows | Pending validation | Workflows defined, require secrets setup |
-| Documentation | Complete | 40+ pages |
-
----
-
-## Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/laugiov/code-safety.git
-cd code-safety
-
-# Option 1: Docker (recommended)
-docker-compose up -d
-# VulnShop: http://localhost:8000
-# Docs: http://localhost:8080
-
-# Option 2: Run Semgrep directly
-make analyze-semgrep
-```
-
----
-
-## Benchmark App (VulnShop)
-
-A controlled Django application with 16 documented security cases for tool validation.
+VulnShop is a Django e-commerce app I wrote specifically for this benchmark. It has 16 security cases:
 
 | # | Case | CWE | Location |
 |---|------|-----|----------|
@@ -100,167 +43,57 @@ A controlled Django application with 16 documented security cases for tool valid
 | 15 | XXE | CWE-611 | `api/views.py` |
 | 16 | Missing Rate Limiting | CWE-307 | `authentication/views.py` |
 
-Each case includes:
-- A documented **taint flow** (source → sink → sanitizer)
-- Expected detections per tool
-- A controlled test scenario for validation (lab-only)
+Each vulnerability has a documented taint flow showing how user input reaches a dangerous sink, and what sanitization would prevent it.
 
----
+## Tools and results
 
-## Analysis Tools
+I tested three tools with different approaches: Pysa (Meta) does deep taint tracking, CodeQL (GitHub) offers semantic analysis with its own query language, and Semgrep is fast pattern matching suited for CI gates.
 
-### Tool Comparison
+| Tool | Analysis type | Speed | Best for |
+|------|--------------|-------|----------|
+| Pysa | Taint tracking | Medium | Complex data flows |
+| CodeQL | Semantic queries | Slow | Deep analysis |
+| Semgrep | Pattern matching | Fast | CI/CD integration |
 
-| Aspect | Pysa | CodeQL | Semgrep |
-|--------|------|--------|---------|
-| **Developer** | Meta | GitHub | Semgrep Inc. |
-| **Analysis Type** | Taint Tracking | Semantic Analysis | Pattern Matching |
-| **Language** | Python (Stubs) | QL (Datalog variant) | YAML + Patterns |
-| **Precision** | High | Very High | Medium |
-| **Speed** | Medium | Slow | Fast |
-| **Best For** | Complex taint flows | Deep semantic queries | CI/CD gates |
+Semgrep is fully validated: 92 custom rules, 226 findings, 81.25% detection rate on the 16 cases. It catches SQLi, XSS, Command Injection, Path Traversal, IDOR, SSRF, Deserialization, SSTI, and XXE reliably. Mass Assignment is partial. Rate limiting and dependency checks are out of scope for SAST.
 
-### Configurations
+Pysa and CodeQL configs are ready but need their respective runtimes (Pyre and CodeQL CLI). I also included CVE reproductions for CVE-2023-36414 and CVE-2022-34265 (Django SQL injection patterns).
 
-```
-analysis/
-├── pysa/
-│   ├── .pyre_configuration
-│   ├── taint.config
-│   └── models/              # sources, sinks, sanitizers
-├── codeql/
-│   ├── codeql-config.yml
-│   └── queries/             # custom QL queries
-└── semgrep/
-    └── rules/               # 92 custom YAML rules
-```
-
----
-
-## Benchmark Results
-
-| Tool | Status | Notes |
-|------|--------|-------|
-| Semgrep | Measured | 226 findings, 81.25% detection rate |
-| Pysa | Pending | Requires Pyre/Pysa runtime setup |
-| CodeQL | Pending | Requires CodeQL CLI + database creation |
-
-### Detection Matrix (Semgrep — Measured)
-
-| Case | Detected |
-|------|:--------:|
-| SQL Injection (Auth) | ✅ |
-| SQL Injection (Search) | ✅ |
-| XSS Reflected | ✅ |
-| XSS Stored | ✅ |
-| Command Injection | ✅ |
-| Path Traversal | ✅ |
-| IDOR | ✅ |
-| Mass Assignment | Partial |
-| SSRF | ✅ |
-| Insecure Deserialization | ✅ |
-| SSTI | ✅ |
-| Hardcoded Secrets | ✅ |
-| Vulnerable Dependencies | N/A (SCA) |
-| Sensitive Data Logging | ✅ |
-| XXE | ✅ |
-| Missing Rate Limiting | N/A (Logic) |
-
-Full results in `benchmarks/results/`.
-
-### Additional Test Patterns
-
-| Pattern | Description |
-|---------|-------------|
-| Django SQL Injection (CVE-2023-36414) | Trunc/Extract injection pattern |
-| Django SQL Injection (CVE-2022-34265) | Format string injection pattern |
-| Expression Injection | Python equivalent scenario for demonstration |
-
----
-
-## CI/CD Integration
-
-CI templates in `.github/workflows/` with SARIF upload:
-
-| Workflow | Description |
-|----------|-------------|
-| `ci.yml` | Linting, build verification |
-| `semgrep-analysis.yml` | Semgrep scan + SARIF upload |
-| `pysa-analysis.yml` | Pysa analysis + SARIF upload |
-| `codeql-analysis.yml` | CodeQL scan + SARIF upload |
-| `docs.yml` | Documentation build & deploy |
-
-All workflows upload SARIF to GitHub Security tab for centralized tracking and PR annotations.
-
----
-
-## Project Structure
-
-```
-code-safety/
-├── vulnerable-app/          # VulnShop Django application
-│   ├── authentication/      # SQL injection, rate limiting
-│   ├── catalog/             # SQL injection, XSS
-│   ├── cart/                # Deserialization
-│   ├── profile/             # IDOR, mass assignment
-│   ├── admin_panel/         # Command injection, path traversal
-│   ├── webhooks/            # SSRF
-│   ├── notifications/       # SSTI
-│   └── api/                 # XXE
-├── analysis/
-│   ├── pysa/                # Pysa config & models
-│   ├── codeql/              # CodeQL queries
-│   └── semgrep/             # Semgrep rules
-├── benchmarks/
-│   ├── ground-truth/        # Documented cases
-│   ├── cve-reproductions/   # CVE test patterns
-│   └── results/             # Analysis outputs
-├── docs/                    # MkDocs documentation
-├── .github/workflows/       # CI/CD templates
-├── docker-compose.yml
-└── Makefile
-```
-
----
-
-## Documentation
-
-```bash
-# Serve documentation locally
-pip install mkdocs-material
-mkdocs serve
-# Open http://localhost:8000
-```
-
-| Section | Description |
-|---------|-------------|
-| Getting Started | Installation, prerequisites |
-| Theory | Taint analysis fundamentals, dataflow |
-| Tools | Pysa, CodeQL, Semgrep guides |
-| Enterprise | CI/CD integration, scaling, governance |
-| Benchmarks | Methodology and results |
-
----
-
-## Contributing
-
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+## Running it
 
 ```bash
 git clone https://github.com/laugiov/code-safety.git
 cd code-safety
-pip install -r requirements-dev.txt
-pre-commit install
+
+# Docker: VulnShop on :8000, docs on :8080
+docker-compose up -d
+
+# Or run Semgrep directly
+make analyze-semgrep
 ```
 
----
+## Project structure
+
+The repo is organized around three main areas: the vulnerable app itself, the analysis configurations, and the benchmark data with ground truth.
+
+```
+vulnerable-app/     # VulnShop Django app
+analysis/           # Pysa, CodeQL, Semgrep configs
+benchmarks/         # Ground truth and results
+docs/               # MkDocs documentation (40+ pages)
+.github/workflows/  # CI templates with SARIF
+```
+
+The CI workflows upload SARIF to GitHub's Security tab for centralized tracking.
+
+## Documentation
+
+Run `pip install mkdocs-material && mkdocs serve` to browse locally. The docs cover taint analysis theory, tool-specific guides, and enterprise topics like scaling SAST and managing false positives.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
-
----
+MIT. Contributions welcome, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Author
 
-**Laurent Giovannoni** — [@laugiov](https://github.com/laugiov)
+Laurent Giovannoni - [@laugiov](https://github.com/laugiov)
