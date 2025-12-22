@@ -15,7 +15,7 @@
 # - CVE-2021-45115 (Denial of Service via UserAttributeSimilarityValidator)
 # - CVE-2021-45116 (Information disclosure via dictsort filter)
 # - CVE-2021-45452 (Directory traversal via Storage.save())
-Django==3.0.0
+Django==5.2.9
 
 # Django REST Framework
 djangorestframework==3.14.0
