@@ -18,7 +18,7 @@
 Django==3.0.0
 
 # Django REST Framework
-djangorestframework==3.14.0
+djangorestframework==3.16.1
 
 # -----------------------------------------------------------------------------
 # Database & ORM
