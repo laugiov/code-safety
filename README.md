@@ -11,7 +11,7 @@ A **Security Engineering** reference implementation to evaluate and operationali
 
 ---
 
-## Hiring Relevance
+## Project Relevance
 
 This repo demonstrates **AppSec / Security Engineering** capabilities:
 
