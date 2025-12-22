@@ -34,7 +34,7 @@ psycopg2-binary>=2.9.0
 # - CVE-2021-25288 (Out-of-bounds Read)
 # - CVE-2021-25290 (Denial of Service)
 # - CVE-2021-28675 (Denial of Service)
-Pillow==8.0.0
+Pillow==12.0.0
 
 # -----------------------------------------------------------------------------
 # YAML Processing - VULNERABLE
